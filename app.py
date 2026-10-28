@@ -231,7 +231,7 @@ if monthly:
     m[0].metric("Target, avg / month", f"{cum_t / 72:,.2f} GW"); m[1].metric("Delivered, avg / month", f"{cum_r / 72:,.2f} GW")
     m[2].metric("2033 target / month", f"{T[-1] / 12:,.2f} GW"); m[3].metric("2033 delivered / month", f"{real[-1] / 12:,.2f} GW")
 else:
-    m[0].metric("Target, 2028-33", f"{cum_t:,.0f} GW", f"2033: {T[-1]:,.0f} GW", delta_color="off", delta_arrow="off")
+    m[0].metric("Target, 2028-33", f"{cum_t:,.1f} GW", f"2033: {T[-1]:,.0f} GW", delta_color="off", delta_arrow="off")
     m[1].metric("Delivered, 2028-33", f"{cum_r:,.1f} GW", f"2033: {real[-1]:,.1f} GW", delta_color="off", delta_arrow="off")
     m[2].metric("Compute in orbit, end 2033", f"{R['fleet_compute'][-1]:,.1f} GW")
     m[3].metric("Satellites launched", f"{sum(sum(s) for s in R['sats']):,.0f}")
