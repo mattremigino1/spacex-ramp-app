@@ -52,8 +52,19 @@ section[data-testid="stSidebar"] > div { overflow: visible !important; }
 section[data-testid="stSidebar"] [data-testid="stSidebarContent"] { overflow: visible !important; }
 div[data-baseweb="popover"], div[data-baseweb="menu"], [data-testid="stSelectboxVirtualDropdown"],
 ul[role="listbox"], div.st-key-preset_box [role="listbox"] {
-  min-width: 22rem !important;
   z-index: 1000000 !important;
+}
+/* Scenario select: only as wide as the longest option label */
+div.st-key-preset_box,
+div.st-key-preset_box div.stSelectbox,
+div.st-key-preset_box div.react-aria-ComboBox,
+div.st-key-preset_box [data-testid="stSelectbox"] {
+  width: fit-content !important;
+  max-width: 100% !important;
+}
+div.st-key-preset_box input {
+  width: auto !important;
+  min-width: 14rem !important; /* fits "Optimized (constrained)" */
 }
 </style>
 """, unsafe_allow_html=True)
