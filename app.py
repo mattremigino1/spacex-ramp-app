@@ -609,7 +609,7 @@ with tab_plan:
         fig.update_yaxes(range=[0, max(tot_v + [1e-9]) * 1.15])
         tag("3-chart")
         st.plotly_chart(fig, use_container_width=True)
-    st.caption("Units of the chosen resource used each year by the selected case and by the optimized case.")
+    st.caption("Units of the chosen resource used each year by the selected case and by the optimized case (new supply only, not accounting for carry-forward).")
     tag("3-totals")
     if monthly:
         k_ = 72; lab_sfx = "avg / month, 2028-33"
