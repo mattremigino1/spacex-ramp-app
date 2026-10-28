@@ -861,7 +861,7 @@ with tab_plan:
 
     mix_v = action_vals["mix"]
     if inp["toggles"]["mix"] == "Optimized":
-        action_cards.append((mix_v["worth_B"], "Run the optimized class and orbit mix",
+        action_cards.append((mix_v["worth_B"], "Keep the optimized class and orbit mix (already applied)",
                              f"Worth ${mix_v['worth_B']:,.0f}B NPV and +{mix_v['gw']:.1f} GW at current resources, at no cost",
                              "", "Now"))
     else:
