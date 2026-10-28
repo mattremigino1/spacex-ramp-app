@@ -555,7 +555,7 @@ with tab_plan:
         st.plotly_chart(style_fig(fig, 360), use_container_width=True)
 
     # ----------------------------------------------------------------------------------------------- 5. closing the gap
-    st.markdown("## 5. Constrained GWs by resource")
+    st.markdown("## 5. Constrained compute by resource")
     gp = R["gap_parts"]
     parts = [("Orbit and satellite mix", "mix", G2), ("Flights alone", "flights", WHITE), ("Solar alone", "solar", G1), ("Flights and solar together", "together", ACC), ("Chips", "chips", G3)]
     gc1, gc2 = st.columns([5.5, 1])

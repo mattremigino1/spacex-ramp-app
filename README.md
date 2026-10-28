@@ -26,7 +26,7 @@ Opens at http://localhost:8501. No internet needed once the packages are install
 | 2. Utilization of each constraint | Heat map, two tabs: what binds in the selected case today, and what the recommended plan needs vs. case supply; drill into any row for units |
 | 3. Annual bottlenecks | Share of the next unit of compute each limit would unlock |
 | 4. Satellites by class | Number or compute, annual or cumulative |
-| 5. Constrained GWs by resource | Gap split into mix, flights alone, solar alone, flights + solar together, chips |
+| 5. Constrained compute by resource | Gap split into mix, flights alone, solar alone, flights + solar together, chips |
 | 6. Recommended plan | Solver actions in priority order, plus side-by-side cases |
 | 7. Costs and value | Cost stack ($ or %), value, indicative NPV, undiscounted spend (illustrative: costs are added assumptions) |
 | 8. Detailed plan | Year-by-year table with CSV download |
