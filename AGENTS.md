@@ -124,7 +124,7 @@ The engine takes ~1 ms per run and the solver ~5 ms, so recomputing every intera
 ## Known open items / ideas (ask me before doing large ones)
 
 - **Satellite count in the recommended plan.** In the case comparison it shows ~1.04M satellites and ~22.7k flights. The unconstrained case shows ~231k satellites. This matches Excel, but it needs a clear explanation (or a better display, e.g. compute per satellite by class), because an interviewer will ask.
-- **Section 2 tabs.** "What binds today" is used÷available for the selected case; "What the plan needs" is Solver uses ÷ case supply (additions excluded). Chip outline marks where shortfall > 0.01 and chips ≥ 99.5%.
+- **Section 2 tabs.** "What binds today" is used÷available for the selected case; "What is needed" is Solver uses ÷ case supply (additions excluded). Chip outline marks where shortfall > 0.01 and chips ≥ 99.5%.
 - **Small segments.** Bar labels on small segments are hidden (`uniformtext_mode="hide"`). Consider hover-only for those.
 - **"60-second story" mode.** An optional guided walkthrough for the demo could step through the sections in order.
 - **Mobile layout.** Not a priority; the demo is on a laptop.

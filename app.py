@@ -349,7 +349,7 @@ with tab_plan:
 
     # ----------------------------------------------------------------------------------------------- 2. what binds
     st.markdown("## 2. Utilization of each limit")
-    tab_binds_today, tab_plan_needs = st.tabs(["What binds today", "What the plan needs"])
+    tab_binds_today, tab_plan_needs = st.tabs(["What binds today", "What is needed"])
 
     with tab_binds_today:
         avail = {"SSO flights": R["sso_avail"], "LEO flights": R["leo_avail"], "Solar": R["solar_supply"], "Orion chips": R["orion_tot"], "Vega chips": R["vega_tot"]}
