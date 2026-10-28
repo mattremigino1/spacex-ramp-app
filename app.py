@@ -223,7 +223,7 @@ def binds_story():
 
 st.markdown(f"<div class='answer'><b>{case_name()}:</b> delivers <b>{cum_r:,.1f} GW</b> of the {cum_t:,.0f} GW 2028-33 target "
             f"(<b>{cum_r / cum_t:.0%}</b>).<br>What binds: {binds_story()}.<br>"
-            f"<span class='muted'>The recommended plan (cheapest added launch capacity and solar fab) reaches {sum(sol['compute']):,.1f} GW "
+            f"<span class='muted'>The recommended plan (most economic added launch capacity and solar fab) reaches {sum(sol['compute']):,.1f} GW "
             f"({sum(sol['compute']) / cum_t:.0%}); see the recommendation section.</span></div>", unsafe_allow_html=True)
 
 m = st.columns(5)
