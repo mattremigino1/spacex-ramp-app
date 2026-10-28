@@ -499,7 +499,7 @@ with tab_plan:
             st.dataframe(dd2.map(lambda v: fmt(v, 2 if unit.endswith("GW") else 1)), use_container_width=True)
 
     # ----------------------------------------------------------------------------------------------- 3. lever strength
-    st.markdown("## 3. Which limit to relieve first")
+    st.markdown("## 3. Annual bottlenecks")
     lev = R["lever"]; labels = ["SSO flights", "LEO flights", "Solar", "Chips"]; lc = [WHITE, ACC, G1, G3]
     fig = go.Figure()
     for i, l in enumerate(labels):
