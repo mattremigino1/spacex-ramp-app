@@ -1,0 +1,227 @@
+{
+ "years": [
+  2028,
+  2029,
+  2030,
+  2031,
+  2032,
+  2033
+ ],
+ "classes": [
+  {
+   "id": "SSO-A",
+   "orbit": "SSO",
+   "gen": "Helios-A",
+   "kw": 140,
+   "kw_per_t": 50,
+   "solar_mult": 1.12,
+   "life": 6
+  },
+  {
+   "id": "SSO-B",
+   "orbit": "SSO",
+   "gen": "Helios-B",
+   "kw": 800,
+   "kw_per_t": 50,
+   "solar_mult": 1.1,
+   "life": 6
+  },
+  {
+   "id": "LEO-A",
+   "orbit": "LEO",
+   "gen": "Helios-A",
+   "kw": 140,
+   "kw_per_t": 48,
+   "solar_mult": 1.5,
+   "life": 6
+  },
+  {
+   "id": "LEO-B",
+   "orbit": "LEO",
+   "gen": "Helios-B",
+   "kw": 800,
+   "kw_per_t": 48,
+   "solar_mult": 1.48,
+   "life": 6
+  }
+ ],
+ "vehicles": [
+  {
+   "name": "V3",
+   "year": 2028,
+   "leo": 95,
+   "sso": 58
+  },
+  {
+   "name": "V4",
+   "year": 2031,
+   "leo": 175,
+   "sso": 115
+  }
+ ],
+ "chips": [
+  {
+   "name": "Orion",
+   "tdp": 1600,
+   "util": 0.75,
+   "first_year": 2028
+  },
+  {
+   "name": "Vega",
+   "tdp": 2500,
+   "util": 0.8,
+   "first_year": 2030
+  }
+ ],
+ "solar_deg": 0.04,
+ "compute_deg": 0.025,
+ "boards": [
+  {
+   "name": "Flight computer",
+   "a": 1,
+   "b": 1,
+   "ai": false
+  },
+  {
+   "name": "Power board",
+   "a": 2,
+   "b": 4,
+   "ai": false
+  },
+  {
+   "name": "Battery board",
+   "a": 2,
+   "b": 4,
+   "ai": false
+  },
+  {
+   "name": "Compute board",
+   "a": 8,
+   "b": 24,
+   "ai": true
+  },
+  {
+   "name": "Switch board",
+   "a": 6,
+   "b": 18,
+   "ai": true
+  },
+  {
+   "name": "Optical / comms",
+   "a": 4,
+   "b": 4,
+   "ai": false
+  }
+ ],
+ "toggles": {
+  "eol_sizing": 1,
+  "chip_carry": 1,
+  "launch_on": 1,
+  "solar_on": 1,
+  "chips_on": 1,
+  "mix": "Optimized",
+  "heliosb_year": 2030,
+  "aux_share": 1,
+  "solar_carry": 0,
+  "apply_solver": 0
+ },
+ "costs": {
+  "launch_capex": 40,
+  "ops": 10,
+  "fab_capex": 300,
+  "cells": 340,
+  "orion": 0.0064,
+  "vega": 0.05,
+  "wacc": 0.093,
+  "launch_first": 2029,
+  "fab_first": 2030,
+  "contribution": 15,
+  "fab_lead": 2,
+  "launch_lead": 2,
+  "hardware": 0.7,
+  "terafab_capex": 5000,
+  "terafab_lead": 3
+ },
+ "target": [
+  0.4,
+  3,
+  12,
+  28,
+  50,
+  75
+ ],
+ "custom_mix": {
+  "SSO-A": [
+   0.7,
+   0.6,
+   0.4,
+   0.1,
+   0,
+   0
+  ],
+  "SSO-B": [
+   0,
+   0,
+   0.15,
+   0.45,
+   0.5,
+   0.45
+  ],
+  "LEO-A": [
+   0.3,
+   0.4,
+   0.3,
+   0.15,
+   0.05,
+   0
+  ],
+  "LEO-B": [
+   0,
+   0,
+   0.15,
+   0.3,
+   0.45,
+   0.55
+  ]
+ },
+ "flights_sso": [
+  60,
+  150,
+  400,
+  900,
+  1800,
+  3000
+ ],
+ "flights_leo": [
+  50,
+  120,
+  350,
+  800,
+  1600,
+  2800
+ ],
+ "solar": [
+  0.8,
+  4,
+  12,
+  22,
+  22,
+  22
+ ],
+ "orion": [
+  400000,
+  1200000,
+  4000000,
+  10000000,
+  18000000,
+  28000000
+ ],
+ "vega": [
+  0,
+  0,
+  2000000,
+  8000000,
+  16000000,
+  24000000
+ ]
+}

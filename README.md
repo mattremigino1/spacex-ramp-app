@@ -1,1 +1,45 @@
-# spacex-ramp-app
+# AI Satellite Launch Ramp — planning tool
+
+Interactive version of the case model (2028–33): how much AI compute the launch, solar and chip limits allow, what binds each year, and the cheapest plan to close the gap. Same logic and answers as the Excel model (v2115).
+
+## Run it locally (fallback for the live demo)
+
+```bash
+pip3 install -r requirements.txt
+streamlit run app.py
+```
+
+Opens at http://localhost:8501. No internet needed once the packages are installed.
+
+## Deploy (free)
+
+1. Push this repo to GitHub (public or private).
+2. Go to https://share.streamlit.io, sign in with GitHub, **Create app** → pick this repo, branch `main`, file `app.py` → **Deploy**.
+3. Free apps sleep after ~12 hours without traffic; open the link shortly before the interview so it is awake.
+
+## What's in the app
+
+| Section | What it shows |
+|---|---|
+| Headline | Selected case vs. target, what binds by year, big numbers (per-month averages when monthly is on) |
+| 1. Compute vs. target | Annual or cumulative; total, by orbit, generation, or class |
+| 2. What binds | Heat map of each limit's utilization (used ÷ available, or needed ÷ available); drill into any limit for units |
+| 3. Which limit to relieve first | Share of the next unit of compute each limit would unlock |
+| 4. Satellites by class | Number or compute, annual or cumulative |
+| 5. Closing the gap | Gap split into mix, flights alone, solar alone, flights + solar together, chips |
+| 6. Recommended plan | Solver actions in priority order, plus side-by-side cases |
+| 7. Costs and value | Cost stack ($ or %), value, indicative NPV, undiscounted spend (illustrative: costs are added assumptions) |
+| 8. Detailed plan | Year-by-year table with CSV download |
+
+The sidebar holds scenario presets (base, unconstrained, seed mix, recommended plan, six risk cases), all toggles, and every case input in editable tables.
+
+## Files
+
+- `app.py` — the interface
+- `model/engine.py` — the model, ported row by row from the Excel workbook
+- `model/solver.py` — the target solver (linear program, same formulation as the Excel Solver setup)
+- `model/defaults.json` — case data and added cost assumptions
+- `model/scenarios.py` — presets
+- `tests/test_model.py` — regression test against the workbook's results (`python3 tests/test_model.py`)
+
+Case data is fictional.
