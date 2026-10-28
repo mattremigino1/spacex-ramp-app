@@ -756,15 +756,12 @@ with tab_plan:
             parts.append(f"Short {_short_phrase(econ_yrs)}: closing it would cost more than the compute is worth at ${contrib:g}/W/yr.")
         if chip_yrs and not econ_yrs:
             title = "Chips cap the plan"
-            pill = "Next contract"
         elif econ_yrs and not chip_yrs:
             title = "Remaining gap not worth closing at these economics"
-            pill = "Revisit if economics change"
         else:
             title = "Remaining gap"
-            pill = "Next contract"
         n = len(action_cards) + 1
-        st.markdown(f"<div class='rec'><span class='pill'>{n}</span><b>{title}</b> <span class='pill'>{pill}</span><br>"
+        st.markdown(f"<div class='rec'><span class='pill'>{n}</span><b>{title}</b><br>"
                     f"<span class='muted'>{' '.join(parts)}</span></div>", unsafe_allow_html=True)
 
     st.caption("Ranked by value at stake: the NPV lost if that action is dropped and the Solver re-plans without it. Illustrative economics.")
