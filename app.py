@@ -43,21 +43,30 @@ div[data-testid="stToolbar"] {
   max-width: fit-content !important;
   background: transparent !important;
 }
-/* Overlay sidebar: main content stays full-width underneath */
+/* Overlay sidebar when open; let Streamlit collapse/close it */
 section[data-testid="stSidebar"] {
   position: fixed !important;
   left: 0 !important;
   top: 0 !important;
   height: 100vh !important;
   z-index: 100000 !important;
+}
+/* Only pin width while expanded — forced width was blocking close */
+section[data-testid="stSidebar"][aria-expanded="true"] {
   width: 24rem !important;
   min-width: 24rem !important;
-  transform: none !important;
 }
 section[data-testid="stSidebar"] > div { overflow: visible !important; }
 section[data-testid="stSidebar"] [data-testid="stSidebarContent"] {
-  overflow: visible !important;
+  overflow: auto !important;
   background: #0D0D0D !important;
+}
+/* Keep collapse control clickable above content */
+[data-testid="stSidebarCollapseButton"],
+[data-testid="stExpandSidebarButton"],
+button[kind="headerNoPadding"] {
+  z-index: 100001 !important;
+  position: relative !important;
 }
 /* Don't push main content aside for the sidebar */
 section.main, div[data-testid="stAppViewContainer"] > section.main,
