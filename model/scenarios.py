@@ -59,7 +59,7 @@ def no_reuse(d):
 
 # Sidebar scenario dropdown (keep labels short).
 PRESETS = {
-    "Base case (constrained)": base,
+    "Base case": base,
 }
 
 # Extra presets kept for optional use; not shown in the sidebar dropdown.

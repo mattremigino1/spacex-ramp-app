@@ -85,6 +85,11 @@ div.st-key-preset_box input {
   width: auto !important;
   min-width: 14rem !important; /* fits the longest preset label */
 }
+/* "+ Add scenario" overlays the right end of the tab bar */
+div.st-key-plus_row { padding-top: 1.35rem; margin-bottom: -4.45rem; position: relative; z-index: 5; pointer-events: none; }
+div.st-key-plus_row button, div.st-key-plus_row .uitag { pointer-events: auto; }
+div.st-key-plus_row [data-testid="stColumn"]:last-child { display: flex; justify-content: flex-end; }
+div.st-key-plus_row button { padding: 0.15rem 0.7rem; min-height: 0; font-size: 0.85rem; }
 .uitag { display:inline-block; background:#FFD400; color:#000; font:700 11px/1.4 Menlo, monospace; padding:0 6px; border-radius:4px; margin:2px 0; letter-spacing:0; text-transform:none; }
 </style>
 """, unsafe_allow_html=True)
@@ -142,41 +147,99 @@ def fmt_cell(v):
 
 
 # ----------------------------------------------------------------------------------------------- state
+# Scenarios hold the case data (Data tabs); the sidebar settings are shared across scenarios.
 DEFAULTS = load_defaults()
 YEARS = DEFAULTS["years"]
-if "inp" not in st.session_state:
-    st.session_state.inp = copy.deepcopy(DEFAULTS)
+BASE = "Base case"
+if "scen" not in st.session_state:
+    st.session_state.scen = [{"id": 0, "name": BASE, "data": copy.deepcopy(DEFAULTS)}]
+    st.session_state.next_id = 1
+    st.session_state.tg = copy.deepcopy(DEFAULTS["toggles"])
+    st.session_state.v4 = DEFAULTS["vehicles"][1]["year"]
+    st.session_state.preset = BASE
     st.session_state.ver = 0
-    st.session_state.preset = list(scenarios.PRESETS)[0]
+
+
+def scen_names():
+    return [sc["name"] for sc in st.session_state.scen]
+
+
+def get_scen(name):
+    return next((sc for sc in st.session_state.scen if sc["name"] == name), st.session_state.scen[0])
 
 
 def set_preset():
-    st.session_state.inp = scenarios.apply(st.session_state.preset_box, DEFAULTS)
     st.session_state.preset = st.session_state.preset_box
-    st.session_state.ver += 1
 
 
 def reset():
-    st.session_state.inp = copy.deepcopy(DEFAULTS)
-    st.session_state.preset = list(scenarios.PRESETS)[0]
+    """Sidebar settings and Base case data back to the case; added scenarios are kept."""
+    st.session_state.tg = copy.deepcopy(DEFAULTS["toggles"])
+    st.session_state.v4 = DEFAULTS["vehicles"][1]["year"]
+    st.session_state.scen[0]["data"] = copy.deepcopy(DEFAULTS)
+    st.session_state.preset = BASE
     st.session_state.ver += 1
 
 
-inp = st.session_state.inp
+def scen_file():
+    """Everything needed to restore the scenarios and settings later."""
+    return json.dumps({"app": "spacex-ramp-app", "version": 1, "scenarios": [{"name": sc["name"], "data": sc["data"]} for sc in st.session_state.scen],
+                       "toggles": st.session_state.tg, "v4": st.session_state.v4, "selected": st.session_state.preset}, indent=1)
+
+
+def load_scen_file():
+    f = st.session_state.get("scen_upload")
+    if f is None:
+        return
+    try:
+        blob = json.loads(f.getvalue().decode("utf-8"))
+        scs = blob["scenarios"]
+        assert scs and all("name" in x and "data" in x for x in scs)
+        st.session_state.scen = [{"id": n, "name": x["name"], "data": x["data"]} for n, x in enumerate(scs)]
+        st.session_state.scen[0]["name"] = BASE
+        st.session_state.next_id = len(scs)
+        st.session_state.tg = {**DEFAULTS["toggles"], **blob.get("toggles", {})}
+        st.session_state.v4 = int(blob.get("v4", DEFAULTS["vehicles"][1]["year"]))
+        st.session_state.preset = blob.get("selected", BASE) if blob.get("selected") in scen_names() else BASE
+        st.session_state.ver += 1
+        st.session_state.load_msg = f"Loaded {len(scs)} scenario(s)."
+    except Exception as ex:
+        st.session_state.load_msg = f"Could not read that file: {ex}"
+
+
+@st.dialog("Add a scenario")
+def add_scenario_dialog():
+    name = st.text_input("Scenario name", placeholder="e.g. V4 slips to 2032")
+    src = st.selectbox("Start from a copy of", scen_names())
+    if st.button("Create", type="primary"):
+        nm = (name or "").strip()
+        if not nm:
+            st.error("Type a name for the scenario.")
+        elif nm in scen_names() or nm == "Ramp":
+            st.error("That name is already used.")
+        else:
+            st.session_state.scen.append({"id": st.session_state.next_id, "name": nm, "data": copy.deepcopy(get_scen(src)["data"])})
+            st.session_state.next_id += 1
+            st.session_state.open_tab = nm
+            st.rerun()
+
+
 V = st.session_state.ver
 k = lambda name: f"{name}_{V}"
+t = st.session_state.tg
 
 # ----------------------------------------------------------------------------------------------- sidebar: inputs
 with st.sidebar:
     st.markdown("### Scenario")
-    names = list(scenarios.PRESETS)
+    names = scen_names()
     if st.session_state.preset not in names:
-        st.session_state.preset = names[0]
+        st.session_state.preset = BASE
     tag("S-preset")
-    st.selectbox("Preset", names, index=names.index(st.session_state.preset), key="preset_box", on_change=set_preset, label_visibility="collapsed")
+    st.selectbox("Scenario", names, index=names.index(st.session_state.preset), key=f"preset_box_{len(names)}_{V}", on_change=None, label_visibility="collapsed")
+    st.session_state.preset = st.session_state[f"preset_box_{len(names)}_{V}"]
     tag("S-reset")
-    st.button("Reset to case data", on_click=reset, use_container_width=True)
-    t = inp["toggles"]
+    st.button("Reset to case data", on_click=reset, use_container_width=True,
+              help="Resets the sidebar settings and the Base case data to the case. Added scenarios are kept.")
     tag("S-optimizer")
     t["apply_solver"] = int(st.toggle("Run optimizer", value=t.get("apply_solver", 0) == 1, key=k("apply"),
                                       help="Adds optimal levels of launch and solar capacity to unlock compute and maximize economic value"))
@@ -192,7 +255,7 @@ with st.sidebar:
     t["chips_on"] = int(st.toggle("AI chip limit", value=t["chips_on"] == 1, key=k("con")))
     tag("S-mix")
     _mix = st.radio("Class and orbit mix", ["Flexible/optimized", "Fixed"], index=0 if t["mix"] == "Optimized" else 1, horizontal=True, key=k("mix"),
-                    help="Flexible/optimized lets the model and the optimizer pick the class split that maximizes compute or minimizes cost. Fixed holds each year's split at the seed mix table (editable on the Data and assumptions tab), for both the selected case and the optimizer's plan.")
+                    help="Flexible/optimized lets the model and the optimizer pick the class split that maximizes compute or minimizes cost. Fixed holds each year's split at the scenario's seed mix table, for both the selected case and the optimizer's plan.")
     t["mix"] = "Optimized" if _mix == "Flexible/optimized" else "Custom"
 
     st.markdown("### Operations")
@@ -205,82 +268,137 @@ with st.sidebar:
     tag("S-heliosb")
     t["heliosb_year"] = int(st.selectbox("First year Helios-B can launch", list(range(2028, 2035)), index=list(range(2028, 2035)).index(t["heliosb_year"]), key=k("hb")))
     tag("S-v4")
-    inp["vehicles"][1]["year"] = int(st.selectbox("First year of Starship V4", list(range(2028, 2035)), index=list(range(2028, 2035)).index(inp["vehicles"][1]["year"]), key=k("v4")))
+    st.session_state.v4 = int(st.selectbox("First year of Starship V4", list(range(2028, 2035)), index=list(range(2028, 2035)).index(st.session_state.v4), key=k("v4")))
     tag("S-aux")
     t["aux_share"] = st.slider("Auxiliary load that scales with compute", 0.0, 1.0, float(t["aux_share"]), 0.05, key=k("aux"))
 
-# ----------------------------------------------------------------------------------------------- tabs: plan vs editable case data
-tab_plan, tab_data = st.tabs(["Ramp", "Data and assumptions"])
+
+# ----------------------------------------------------------------------------------------------- tabs: plan + one data tab per scenario
+if st.session_state.get("open_tab"):
+    st.session_state["main_tabs"] = st.session_state.pop("open_tab")
+with st.container(key="plus_row"):          # sits on the right end of the tab bar (see CSS)
+    _pc = st.columns([10, 2])
+    with _pc[1]:
+        tag("T-plus")
+        if st.button("＋ Add scenario", key="add_scen", help="Add a scenario: copies an existing scenario's data into a new tab you can edit"):
+            add_scenario_dialog()
+all_tabs = st.tabs(["Ramp"] + scen_names(), key="main_tabs", on_change="rerun")
+tab_plan, scen_tabs = all_tabs[0], all_tabs[1:]
 
 
-def year_table(label, rows, key):
+def year_table(rows, key):
     df = pd.DataFrame({r: vals for r, vals in rows.items()}, index=[str(y) for y in YEARS]).T
     cols = {str(y): st.column_config.NumberColumn(str(y), format="localized") for y in YEARS}
     out = st.data_editor(df, key=k(key), use_container_width=True, column_config=cols)
     return {r: [float(out.loc[r, str(y)]) for y in YEARS] for r in rows}
 
 
-with tab_data:
-    st.caption("Case inputs and added cost assumptions. Edits update the Ramp tab.")
+def data_tab(sc):
+    """Editable case data for one scenario; edits write straight into that scenario."""
+    d, p_ = sc["data"], f"s{sc['id']}_"
+    if sc["id"] != 0:
+        mc = st.columns([3, 1, 4])
+        new_nm = mc[0].text_input("Scenario name", value=sc["name"], key=k(p_ + "name"))
+        if new_nm.strip() and new_nm.strip() != sc["name"] and new_nm.strip() not in scen_names() and new_nm.strip() != "Ramp":
+            if st.session_state.preset == sc["name"]:
+                st.session_state.preset = new_nm.strip()
+            sc["name"] = new_nm.strip()
+            st.session_state.open_tab = sc["name"]
+            st.rerun()
+        mc[1].markdown("<div style='height:1.75rem'></div>", unsafe_allow_html=True)
+        if mc[1].button("Delete scenario", key=k(p_ + "del")):
+            st.session_state.scen = [x for x in st.session_state.scen if x["id"] != sc["id"]]
+            if st.session_state.preset == sc["name"]:
+                st.session_state.preset = BASE
+            st.session_state.ver += 1
+            st.rerun()
+    st.caption("Case inputs and added cost assumptions for this scenario. Pick it in the sidebar's scenario dropdown to see it on the Ramp tab.")
     tag("D1-case-inputs")
     with st.expander("Target, flights, solar, chips", expanded=True):
-        e = year_table("", {"Compute target (GW)": inp["target"], "SSO flights": inp["flights_sso"], "LEO flights": inp["flights_leo"],
-                            "Solar (GW/yr)": inp["solar"], "Orion chips": inp["orion"], "Vega chips": inp["vega"]}, "case")
-        inp["target"], inp["flights_sso"], inp["flights_leo"] = e["Compute target (GW)"], e["SSO flights"], e["LEO flights"]
-        inp["solar"], inp["orion"], inp["vega"] = e["Solar (GW/yr)"], e["Orion chips"], e["Vega chips"]
+        e = year_table({"Compute target (GW)": d["target"], "SSO flights": d["flights_sso"], "LEO flights": d["flights_leo"],
+                        "Solar (GW/yr)": d["solar"], "Orion chips": d["orion"], "Vega chips": d["vega"]}, p_ + "case")
+        d["target"], d["flights_sso"], d["flights_leo"] = e["Compute target (GW)"], e["SSO flights"], e["LEO flights"]
+        d["solar"], d["orion"], d["vega"] = e["Solar (GW/yr)"], e["Orion chips"], e["Vega chips"]
     tag("D2-seed-mix")
     with st.expander("Seed (custom) mix, share of compute", expanded=True):
-        e = year_table("", inp["custom_mix"], "mix_tbl")
-        inp["custom_mix"] = e
+        e = year_table(d["custom_mix"], p_ + "mix_tbl")
+        d["custom_mix"] = e
         bad = [y for j, y in enumerate(YEARS) if abs(sum(e[c][j] for c in e) - 1) > 1e-6]
         if bad: st.warning("Mix does not sum to 100% in " + ", ".join(map(str, bad)))
     tag("D3-classes")
     with st.expander("Satellite classes", expanded=True):
-        cdf = pd.DataFrame(inp["classes"]).set_index("id")[["orbit", "gen", "kw", "kw_per_t", "solar_mult", "life"]]
+        cdf = pd.DataFrame(d["classes"]).set_index("id")[["orbit", "gen", "kw", "kw_per_t", "solar_mult", "life"]]
         cdf.columns = ["Orbit", "Generation", "Compute (kW)", "kW per ton", "Solar multiplier", "Life (yrs)"]
         num = lambda lab: st.column_config.NumberColumn(lab, format="localized")
-        ce = st.data_editor(cdf, key=k("cls"), disabled=["Orbit", "Generation"], use_container_width=True,
+        ce = st.data_editor(cdf, key=k(p_ + "cls"), disabled=["Orbit", "Generation"], use_container_width=True,
                             column_config={lab: num(lab) for lab in ("Compute (kW)", "kW per ton", "Solar multiplier", "Life (yrs)")})
-        for c in inp["classes"]:
-            c["kw"], c["kw_per_t"], c["solar_mult"], c["life"] = (float(ce.loc[c["id"], "Compute (kW)"]), float(ce.loc[c["id"], "kW per ton"]),
-                                                                  float(ce.loc[c["id"], "Solar multiplier"]), int(ce.loc[c["id"], "Life (yrs)"]))
+        for c_ in d["classes"]:
+            c_["kw"], c_["kw_per_t"], c_["solar_mult"], c_["life"] = (float(ce.loc[c_["id"], "Compute (kW)"]), float(ce.loc[c_["id"], "kW per ton"]),
+                                                                      float(ce.loc[c_["id"], "Solar multiplier"]), int(ce.loc[c_["id"], "Life (yrs)"]))
     tag("D4-starship-chips")
     with st.expander("Starship, chips, degradation", expanded=True):
-        vdf = pd.DataFrame(inp["vehicles"]).set_index("name")[["leo", "sso"]]; vdf.columns = ["Payload to LEO (t)", "Payload to SSO (t)"]
-        ve = st.data_editor(vdf, key=k("veh"), use_container_width=True,
+        vdf = pd.DataFrame(d["vehicles"]).set_index("name")[["leo", "sso"]]; vdf.columns = ["Payload to LEO (t)", "Payload to SSO (t)"]
+        ve = st.data_editor(vdf, key=k(p_ + "veh"), use_container_width=True,
                             column_config={lab: st.column_config.NumberColumn(lab, format="localized")
                                            for lab in ("Payload to LEO (t)", "Payload to SSO (t)")})
-        for v in inp["vehicles"]:
+        for v in d["vehicles"]:
             v["leo"], v["sso"] = float(ve.loc[v["name"], "Payload to LEO (t)"]), float(ve.loc[v["name"], "Payload to SSO (t)"])
-        chdf = pd.DataFrame(inp["chips"]).set_index("name")[["tdp", "util", "first_year"]]; chdf.columns = ["TDP (W)", "Utilization", "First year"]
-        che = st.data_editor(chdf, key=k("chips"), use_container_width=True,
+        chdf = pd.DataFrame(d["chips"]).set_index("name")[["tdp", "util", "first_year"]]; chdf.columns = ["TDP (W)", "Utilization", "First year"]
+        che = st.data_editor(chdf, key=k(p_ + "chips"), use_container_width=True,
                              column_config={lab: st.column_config.NumberColumn(lab, format="localized")
                                             for lab in ("TDP (W)", "Utilization", "First year")})
-        for c in inp["chips"]:
-            c["tdp"], c["util"], c["first_year"] = float(che.loc[c["name"], "TDP (W)"]), float(che.loc[c["name"], "Utilization"]), int(che.loc[c["name"], "First year"])
-        inp["solar_deg"] = st.number_input("Solar degradation per year", 0.0, 0.5, float(inp["solar_deg"]), 0.005, format="%.3f", key=k("sd"))
-        inp["compute_deg"] = st.number_input("Compute degradation per year", 0.0, 0.5, float(inp["compute_deg"]), 0.005, format="%.3f", key=k("cd"))
+        for c_ in d["chips"]:
+            c_["tdp"], c_["util"], c_["first_year"] = float(che.loc[c_["name"], "TDP (W)"]), float(che.loc[c_["name"], "Utilization"]), int(che.loc[c_["name"], "First year"])
+        d["solar_deg"] = st.number_input("Solar degradation per year", 0.0, 0.5, float(d["solar_deg"]), 0.005, format="%.3f", key=k(p_ + "sd"))
+        d["compute_deg"] = st.number_input("Compute degradation per year", 0.0, 0.5, float(d["compute_deg"]), 0.005, format="%.3f", key=k(p_ + "cd"))
     tag("D5-boards")
     with st.expander("Circuit boards per satellite"):
-        bdf = pd.DataFrame(inp["boards"]).set_index("name"); bdf.columns = ["Helios-A", "Helios-B", "AI-related"]
-        be = st.data_editor(bdf, key=k("boards"), use_container_width=True,
+        bdf = pd.DataFrame(d["boards"]).set_index("name"); bdf.columns = ["Helios-A", "Helios-B", "AI-related"]
+        be = st.data_editor(bdf, key=k(p_ + "boards"), use_container_width=True,
                             column_config={"Helios-A": st.column_config.NumberColumn("Helios-A", format="localized"),
                                            "Helios-B": st.column_config.NumberColumn("Helios-B", format="localized")})
-        for b in inp["boards"]:
+        for b in d["boards"]:
             b["a"], b["b"], b["ai"] = float(be.loc[b["name"], "Helios-A"]), float(be.loc[b["name"], "Helios-B"]), bool(be.loc[b["name"], "AI-related"])
     tag("D6-costs")
     with st.expander("Costs and value"):
-        c = inp["costs"]
+        c_ = d["costs"]
         fields = [("launch_capex", "New launch capacity, $M per extra flight/yr", 1.0), ("ops", "Operating cost per flight, $M", 1.0),
                   ("fab_capex", "Solar fab capex, $M per GW/yr", 10.0), ("cells", "Solar cell production cost, $M per GW", 10.0),
                   ("orion", "Orion chip production cost, $M per chip", 0.0005), ("vega", "Vega chip price, $M per chip", 0.005),
                   ("hardware", "Satellite hardware ex chips and cells, $M per ton", 0.05), ("terafab_capex", "Terafab capex, $M per million chips/yr", 250.0),
                   ("wacc", "Discount rate", 0.005), ("contribution", "Contribution, $ per W per year", 0.5)]
         for key_, lab, step in fields:
-            c[key_] = st.number_input(lab, value=float(c[key_]), step=step, format="%.4f" if c[key_] < 1 else "%.2f", key=k("c_" + key_))
+            c_[key_] = st.number_input(lab, value=float(c_[key_]), step=step, format="%.4f" if c_[key_] < 1 else "%.2f", key=k(p_ + "c_" + key_))
         for key_, lab in (("launch_first", "First year new launch capacity usable"), ("fab_first", "First year new fab capacity usable"),
                           ("launch_lead", "Launch capacity lead time (yrs)"), ("fab_lead", "Fab lead time (yrs)"), ("terafab_lead", "Terafab lead time (yrs)")):
-            c[key_] = int(st.number_input(lab, value=int(c[key_]), step=1, key=k("c_" + key_)))
+            c_[key_] = int(st.number_input(lab, value=int(c_[key_]), step=1, key=k(p_ + "c_" + key_)))
+
+
+for tab_, sc in zip(scen_tabs, list(st.session_state.scen)):
+    with tab_:
+        data_tab(sc)
+
+
+def build_inp(sc):
+    """A scenario's data with the shared sidebar settings applied."""
+    x = copy.deepcopy(sc["data"])
+    x["toggles"] = copy.deepcopy(st.session_state.tg)
+    x["vehicles"][1]["year"] = st.session_state.v4
+    return x
+
+
+inp = build_inp(get_scen(st.session_state.preset))
+
+# Save / load goes last in the sidebar so the file includes this run's data edits
+with st.sidebar:
+    st.markdown("### Save / load scenarios")
+    tag("S-save-load")
+    st.download_button("Download scenarios", scen_file().encode(), "spacex-ramp-scenarios.json", "application/json", use_container_width=True,
+                       help="Saves every scenario and the sidebar settings to a file you can load back later.")
+    st.file_uploader("Load scenarios", type=["json"], key="scen_upload", on_change=load_scen_file, label_visibility="collapsed")
+    if st.session_state.get("load_msg"):
+        st.caption(st.session_state.pop("load_msg"))
+
 
 # ----------------------------------------------------------------------------------------------- compute
 
@@ -331,6 +449,13 @@ def compute(inp_json):
         v_al = copy.deepcopy(inp); v_al[fkey] = [1e7] * len(inp[fkey])
         action_vals.setdefault("alone", {})[key] = max(0.0, sum(run(v_al, sol)["realized"]) - base_gw)
     return sol, R, variants, sol_opt, sol_cust, opt_mix_R, action_vals
+
+
+@st.cache_data(show_spinner=False)
+def scenario_row(inp_json):
+    """Another scenario with the current sidebar settings (for the scenario comparison table)."""
+    x = json.loads(inp_json)
+    return run(x, solve(x))
 
 
 try:
@@ -905,13 +1030,25 @@ with tab_plan:
 
     st.caption("Ranked by value at stake: the NPV lost if that action is dropped and the optimizer re-plans without it.")
 
-    comp_rows = {}
-    for name, Rv in VAR.items():
-        comp_rows[name] = {"2028-33 compute (GW)": sum(Rv["realized"]), "% of target": f"{sum(Rv['realized']) / cum_t:.0%}", "2033 compute (GW)": Rv["realized"][-1],
-                           "Satellites": sum(sum(s) for s in Rv["sats"]), "Starship flights": sum(Rv["flights_sso"]) + sum(Rv["flights_leo"]),
-                           "Solar used (GW)": sum(Rv["solar_used"]), "Orion chips (M)": sum(Rv["orion_used"]) / 1e6, "Vega chips (M)": sum(Rv["vega_used"]) / 1e6}
+    def _row(Rv, tgt):
+        return {"2028-33 compute (GW)": sum(Rv["realized"]), "% of target": f"{sum(Rv['realized']) / tgt:.0%}" if tgt else "n/a", "2033 compute (GW)": Rv["realized"][-1],
+                "Satellites": sum(sum(s) for s in Rv["sats"]), "Starship flights": sum(Rv["flights_sso"]) + sum(Rv["flights_leo"]),
+                "Solar used (GW)": sum(Rv["solar_used"]), "Orion chips (M)": sum(Rv["orion_used"]) / 1e6, "Vega chips (M)": sum(Rv["vega_used"]) / 1e6}
+    sel_nm = case_name()
+    labels7 = {"Unconstrained": f"{sel_nm}: unconstrained", "Base case (constrained)": f"{sel_nm}: constrained", "Optimized (constrained)": f"{sel_nm}: optimized"}
+    comp_rows = {labels7[name]: _row(Rv, cum_t) for name, Rv in VAR.items()}
+    comp_rows[labels7["Unconstrained"]]["% of target"] = "100%"
+    # every other scenario, run with the current sidebar settings
+    for sc_ in st.session_state.scen:
+        if sc_["name"] == sel_nm:
+            continue
+        x_ = build_inp(sc_)
+        try:
+            Rx = scenario_row(json.dumps(x_, sort_keys=True))
+            comp_rows[f"{sc_['name']} (current settings)"] = _row(Rx, sum(x_["target"]))
+        except Exception:
+            pass
     cdf = pd.DataFrame(comp_rows).T
-    cdf.loc["Unconstrained", "% of target"] = "100%"
     st.markdown("**Scenario comparison**")
     tag("7-table")
     st.dataframe(cdf.map(fmt_cell), use_container_width=True)

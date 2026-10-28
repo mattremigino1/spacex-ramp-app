@@ -32,7 +32,9 @@ Opens at http://localhost:8501. No internet needed once the packages are install
 | Scenario economics | Value, cost, NPV, and how much the recommended plan adds (costs are added assumptions) |
 | Detailed plan | Year-by-year table with CSV download |
 
-The sidebar holds the scenario dropdown (Base case for now) and all toggles: switch the three limits off for the unconstrained case, or switch on Run optimizer for the optimized case. Every case input and cost assumption is editable on the Data and assumptions tab. Six risk presets remain in `model/scenarios.py` (`RISK_PRESETS`) but are not in the dropdown.
+**Scenarios.** Each scenario has its own tab next to Ramp with all its case data and cost assumptions, editable. Click **＋ Add scenario** (right end of the tab bar), name it, and pick which scenario to copy. Each added scenario's tab can rename or delete it. Pick a scenario in the sidebar dropdown to show it on the Ramp tab; the sidebar settings (Run optimizer, constraints, operations) are shared across scenarios. The Optimized plan's comparison table lists every scenario.
+
+**Saving.** Scenarios live in the browser session. Use **Download scenarios** in the sidebar to save them to a file, and load that file to restore them (e.g. after a reload or an app restart). **Reset to case data** resets the sidebar settings and the Base case data; added scenarios are kept.
 
 ## Files
 
