@@ -812,4 +812,3 @@ with tab_plan:
             ddf["2028-2033"] = ddf.sum(axis=1)
         st.dataframe(ddf.map(lambda v: fmt(v, 2)), use_container_width=True)
         st.download_button("Download CSV", ddf.to_csv().encode(), "plan.csv", key="dl8")
-    st.markdown("<p class='muted'>Fictional case data. Model logic mirrors the Excel model; Solver = linear program (HiGHS) equivalent to the Excel Solver setup.</p>", unsafe_allow_html=True)
