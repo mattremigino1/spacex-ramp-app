@@ -222,7 +222,7 @@ with st.sidebar:
     t["solar_on"] = int(st.toggle("Solar limit", value=t["solar_on"] == 1, key=k("son")))
     t["chips_on"] = int(st.toggle("AI chip limit", value=t["chips_on"] == 1, key=k("con")))
     _mix = st.radio("Class and orbit mix", ["Optimized", "Fixed"], index=0 if t["mix"] == "Optimized" else 1, horizontal=True, key=k("mix"),
-                    help="Optimized picks the split that maximizes compute under the active limits; Fixed uses the seed mix on the Data and assumptions tab.")
+                    help="Optimized lets the model and the Solver pick the class split that maximizes compute or minimizes cost. Custom fixes each year's split to the seed mix table (editable under Case data), for both the selected case and the Solver's recommended plan.")
     t["mix"] = "Optimized" if _mix == "Optimized" else "Custom"
     t["apply_solver"] = int(st.toggle("Run optimizer", value=t.get("apply_solver", 0) == 1, key=k("apply"),
                                       help="Adds the launch capacity and solar fab the Solver recommends, then runs the plan in whole satellites."))
@@ -298,18 +298,22 @@ with tab_data:
 @st.cache_data(show_spinner=False)
 def compute(inp_json):
     inp = json.loads(inp_json)
-    sol = solve(inp)
+    inp_opt = copy.deepcopy(inp); inp_opt["toggles"]["mix"] = "Optimized"
+    inp_cust = copy.deepcopy(inp); inp_cust["toggles"]["mix"] = "Custom"
+    sol_opt = solve(inp_opt)
+    sol_cust = solve(inp_cust)
+    sol = sol_opt if str(inp["toggles"]["mix"]).strip() == "Optimized" else sol_cust
     R = run(inp, sol)
     variants = {}
     for name, mod in (("Unconstrained", dict(launch_on=0, solar_on=0, chips_on=0, apply_solver=0)), ("Constrained, seed mix", dict(mix="Custom", apply_solver=0)),
                       ("Constrained, optimized mix", dict(mix="Optimized", apply_solver=0)), ("Recommended plan", dict(apply_solver=1))):
         v = copy.deepcopy(inp); v["toggles"].update(mod)
         variants[name] = run(v, sol)
-    return sol, R, variants
+    return sol, R, variants, sol_opt, sol_cust
 
 
 try:
-    sol, R, VAR = compute(json.dumps(inp, sort_keys=True))
+    sol, R, VAR, sol_opt, sol_cust = compute(json.dumps(inp, sort_keys=True))
 except Exception as ex:   # bad input (e.g., a zero payload)
     st.error(f"The model could not run with these inputs: {ex}")
     st.stop()
@@ -614,7 +618,14 @@ with tab_plan:
     c = inp["costs"]
     recs = []
     opt_cum = sum(VAR["Constrained, optimized mix"]["realized"]); seed_cum = sum(VAR["Constrained, seed mix"]["realized"])
-    recs.append(("Optimize class and orbit mix", f"+{opt_cum - seed_cum:,.1f} GW 2028-33 vs. the seed mix, at no cost", "Now"))
+    x_mix = opt_cum - seed_cum
+    if inp["toggles"]["mix"] == "Optimized":
+        recs.append(("Optimize class and orbit mix", f"+{x_mix:,.1f} GW 2028-33 vs. the seed mix, at no cost", "Now"))
+    else:
+        npv_delta = sol_opt["pv"]["npv"] - sol_cust["pv"]["npv"]
+        recs.append(("Class mix held at the seed mix",
+                     f"Switching to the optimized mix would add {x_mix:.1f} GW 2028-33 at current resources and change the recommended plan's NPV by {npv_delta:+,.0f}B.",
+                     "Your choice"))
     fab = sol["cap_fab"]
     if max(fab) > 1e-6:
         y0 = YEARS[next(j for j in range(6) if fab[j] > 1e-6)]
@@ -635,7 +646,9 @@ with tab_plan:
                      "Still short: " + ", ".join(f"{s_:,.1f} GW in {y}" for y, s_ in short) + (". Chip supply binds there: pull Vega forward or add early Orion volume" if chip_lim else ""),
                      "Next contract"))
     for i, (h, body, when) in enumerate(recs, 1):
-        st.markdown(f"<div class='rec'><span class='pill'>{i}</span><b>{h}</b><br><span class='muted'>{body}</span></div>", unsafe_allow_html=True)
+        # Timing / choice pill only on card 1 (cards 2+ keep no timing labels)
+        when_html = f" <span class='pill'>{when}</span>" if i == 1 else ""
+        st.markdown(f"<div class='rec'><span class='pill'>{i}</span><b>{h}</b>{when_html}<br><span class='muted'>{body}</span></div>", unsafe_allow_html=True)
 
     comp_rows = {}
     for name, Rv in VAR.items():
