@@ -93,10 +93,23 @@ def build(P):
     return c, Aub, bub, Aeq, beq
 
 
-def solve(inp):
+def _bounds(nv, P, block):
+    b = [(0, None)] * nv
+    for name in (block or ()):
+        k = {"sso": BS, "leo": BL, "fab": BF}[name]
+        for j in range(P["n"]):
+            b[ix(j, k)] = (0, 0)
+    return b
+
+
+def solve(inp, block=None):
+    """Solve the target LP.
+
+    block = optional list of additions to forbid ("sso", "leo", "fab"), used by the app to value each recommended action. Not part of the Excel model.
+    """
     P, d = params(inp)
     c, Aub, bub, Aeq, beq = build(P)
-    res = linprog(c, A_ub=Aub, b_ub=bub, A_eq=Aeq if Aeq else None, b_eq=beq if beq else None, bounds=[(0, None)] * len(c), method="highs")
+    res = linprog(c, A_ub=Aub, b_ub=bub, A_eq=Aeq if Aeq else None, b_eq=beq if beq else None, bounds=_bounds(len(c), P, block), method="highs")
     if res.status != 0:
         raise RuntimeError("Solver failed: " + res.message)
     x = res.x.copy()

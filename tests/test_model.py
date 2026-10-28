@@ -7,6 +7,7 @@ import copy, json, os, sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from model.engine import run, load_defaults
 from model.solver import solve
+from model.economics import selected_case_economics
 
 EXP = json.load(open(os.path.join(os.path.dirname(__file__), "expected.json")))
 
@@ -45,9 +46,26 @@ def test_parity():
         assert not bad, (name, bad[:5])
 
 
+def test_selected_case_matches_solver_plan():
+    """With additions applied, selected-case NPV matches the Solver plan NPV (whole-satellite rounding)."""
+    inp = copy.deepcopy(load_defaults())
+    inp["toggles"]["apply_solver"] = 1
+    sol = solve(inp)
+    R = run(inp, sol)
+    econ = selected_case_economics(inp, R, sol)
+    a, b = econ["pv"]["npv"], sol["pv"]["npv"]
+    assert abs(a - b) <= 0.001 * abs(b), (a, b)
+
+
 if __name__ == "__main__":
     tot = 0
     for name, inp in cases().items():
         bad = check(name, inp); tot += len(bad)
         print(f"{name:20} {'OK' if not bad else bad[:5]}")
+    try:
+        test_selected_case_matches_solver_plan()
+        print(f"{'selected_case_econ':20} OK")
+    except AssertionError as ex:
+        print(f"{'selected_case_econ':20} FAIL {ex}")
+        tot += 1
     sys.exit(1 if tot else 0)

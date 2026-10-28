@@ -4,7 +4,7 @@
 
 I'm Matt, interviewing for a Business Operations role on SpaceX's AI satellites team. The final round is a case on the **AI satellite launch ramp, 2028–33**. I deliver three things:
 
-1. An Excel model, sent in advance. The current version is "20261027 AI Satellite Ramp Case Model 2115.xlsx", which is not in this repo.
+1. An Excel model, sent in advance. The current version is "20261028 AI Satellite Ramp Case Model 0120.xlsx", which is not in this repo.
 2. A PowerPoint of about 10–15 minutes, which includes an "About me" section.
 3. **A live web-app demo of about 30 minutes. This repo is that app.**
 
@@ -52,6 +52,7 @@ The economics are illustrative because the cost inputs are added assumptions:
 app.py                 Streamlit UI (single page, sidebar inputs, 8 numbered sections)
 model/engine.py        The Excel model ported row by row: run(inp, solver=None) -> dict of per-year lists
 model/solver.py        Target solver LP (scipy HiGHS): solve(inp) -> plan, costs, PV, undiscounted totals
+model/economics.py     Selected-case economics; mirrors section J of the Excel Summary tab
 model/defaults.json    Case data + toggles + added cost assumptions (the single source of inputs)
 model/scenarios.py     Presets: base, unconstrained, seed mix, recommended plan, 6 risk cases
 tests/test_model.py    Regression test vs. results that tie to the Excel workbook
@@ -63,12 +64,8 @@ tests/expected.json    Expected values for that test
 
 1. `load_defaults()` returns the inputs.
 2. The sidebar edits `st.session_state.inp`.
-3. `compute(json)` is cached with `st.cache_data`. It runs `solve(inp)`, then `run(inp, sol)`, then four comparison variants:
-   - Unconstrained;
-   - Constrained, seed mix;
-   - Constrained, optimized mix;
-   - Recommended plan.
-4. The sections render from `R` (the engine output) and `sol` (the solver output).
+3. `compute(json)` is cached with `st.cache_data`. It solves the plan for both mix settings (optimized and fixed), runs `run(inp, sol)`, runs three comparison variants (Unconstrained, Base case (constrained), Optimized (constrained)), and re-solves once per recommended addition with that addition blocked to value it.
+4. The sections render from `R` (the engine output), `sol` (the solver output) and `selected_case_economics()` (section 7).
 
 ### Engine concepts
 
@@ -124,7 +121,7 @@ The engine takes ~1 ms per run and the solver ~5 ms, so recomputing every intera
 ## Known open items / ideas (ask me before doing large ones)
 
 - **Satellite count in the recommended plan.** In the case comparison it shows ~1.04M satellites and ~22.7k flights. The unconstrained case shows ~231k satellites. This matches Excel, but it needs a clear explanation (or a better display, e.g. compute per satellite by class), because an interviewer will ask.
-- **Heat map highlighting.** With "Needed to hit the target ÷ available" selected, the cells that bind are not outlined. Consider highlighting cells above 100%.
+- **Section 2 tabs.** "What binds today" is used÷available for the selected case; "What is needed" is Solver uses ÷ case supply (additions excluded). Chip outline marks where shortfall > 0.01 and chips ≥ 99.5%.
 - **Small segments.** Bar labels on small segments are hidden (`uniformtext_mode="hide"`). Consider hover-only for those.
 - **"60-second story" mode.** An optional guided walkthrough for the demo could step through the sections in order.
 - **Mobile layout.** Not a priority; the demo is on a laptop.

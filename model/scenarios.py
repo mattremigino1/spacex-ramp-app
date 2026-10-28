@@ -57,11 +57,16 @@ def no_reuse(d):
     return d
 
 
+# Sidebar scenario dropdown (keep labels short).
 PRESETS = {
-    "Base case (case resources, optimized mix)": base,
-    "Unconstrained (all limits off)": unconstrained,
+    "Base case (constrained)": base,
+    "Optimized (constrained)": recommended,  # apply_solver = 1
+    "Unconstrained": unconstrained,
+}
+
+# Extra presets kept for optional use; not shown in the sidebar dropdown.
+RISK_PRESETS = {
     "Seed mix (Annual series tab)": seed_mix,
-    "Recommended plan (Solver additions applied)": recommended,
     "Risk: Starship V4 slips to 2032": v4_slip,
     "Risk: flights 20% below plan": flights_short,
     "Risk: only 80% of solar for AI": solar_share,
