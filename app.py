@@ -401,8 +401,13 @@ with tab_plan:
         fig = go.Figure()
         for gname, idx in groups.items():
             vals = acc([sum(R["comp_cls"][j][i] for i in idx) * mf for j in range(6)])
-            fig.add_bar(x=YEARS, y=vals, name=gname, marker_color=gcol.get(gname, CLASS_COL.get(gname, WHITE)), text=[fmt(v, 2 if monthly else 1) for v in vals], textposition="inside", insidetextanchor="end",
-                        insidetextfont=dict(color="#000000" if gcol.get(gname, CLASS_COL.get(gname, WHITE)) in (WHITE, G1, ACC2) else WHITE))
+            fig.add_bar(x=YEARS, y=vals, name=gname, marker_color=gcol.get(gname, CLASS_COL.get(gname, WHITE)), text=[fmt(v, 2 if monthly else 1) for v in vals], textposition=("outside" if split == "Total" else "inside"), insidetextanchor="end",
+                        insidetextfont=dict(color="#000000" if gcol.get(gname, CLASS_COL.get(gname, WHITE)) in (WHITE, G1, ACC2) else WHITE),
+                        outsidetextfont=dict(color=WHITE), cliponaxis=False)
+        tot1 = acc([sum(R["comp_cls"][j][i] for i in range(4)) * mf for j in range(6)])
+        if split != "Total":   # with one series the inside label already is the total
+            fig.add_scatter(x=YEARS, y=tot1, mode="text", text=[fmt(v, 2 if monthly else 1) for v in tot1], textposition="top center",
+                            textfont=dict(color=WHITE), showlegend=False, hoverinfo="skip")
         tv = acc([x * mf for x in T])
         fig.add_scatter(x=YEARS, y=tv, name="Target", mode="lines+markers+text", line=dict(color=G2, dash="dash", width=2), text=[fmt(v, 2 if monthly else 1) for v in tv], textposition="top center", textfont=dict(color=G1))
         fig.update_layout(barmode="stack", yaxis_title=("Cumulative GW" if cum else unit_gw))
@@ -653,7 +658,7 @@ with tab_plan:
         st.dataframe(ldf, use_container_width=True)
 
     # ----------------------------------------------------------------------------------------------- 4. satellites
-    st.markdown("## Annual satellite launches by class")
+    st.markdown("## Annual satellites launched by class")
     cc1, cc2 = st.columns([5.5, 1])
     with cc2:
         tag("5-controls")
@@ -667,9 +672,28 @@ with tab_plan:
             fig.add_bar(x=YEARS, y=vals, name=cls[i]["id"], marker_color=CLASS_COL[cls[i]["id"]],
                         text=[(f"{v:,.0f}" if measure.startswith("Number") else f"{v:,.1f}") if v > 0 else "" for v in vals], textposition="inside",
                         insidetextfont=dict(color="#000000" if CLASS_COL[cls[i]["id"]] in (WHITE, G1, ACC2) else WHITE))
+        is_num = measure.startswith("Number")
+        base_t = [sum((R["sats"][j][i] if is_num else R["comp_cls"][j][i]) for i in range(4)) for j in range(6)]
+        tot5 = [sum(base_t[:j + 1]) for j in range(6)] if cum4 else [b * mf for b in base_t]
+        fig.add_scatter(x=YEARS, y=tot5, mode="text", text=[(f"{v:,.0f}" if is_num else f"{v:,.1f}") for v in tot5], textposition="top center",
+                        textfont=dict(color=WHITE), showlegend=False, hoverinfo="skip")
         fig.update_layout(barmode="stack")
+        fig = style_fig(fig, 360)
+        fig.update_yaxes(range=[0, max(tot5 + [1e-9]) * 1.15])
         tag("5-chart")
-        st.plotly_chart(style_fig(fig, 360), use_container_width=True)
+        st.plotly_chart(fig, use_container_width=True)
+    # 2028-33 totals by class, font colored to match the legend
+    tag("5-totals")
+    lab_sfx5 = "avg / month, 2028-33" if monthly else "2028-33"
+    sc5 = st.columns(4)
+    for col_, i in zip(sc5, range(4)):
+        tot_i = sum((R["sats"][j][i] if is_num else R["comp_cls"][j][i]) for j in range(6))
+        val = tot_i / 72 if monthly else tot_i
+        unit5 = "satellites" if is_num else "GW"
+        txt5 = (f"{val:,.0f}" if not monthly else f"{val:,.1f}") if is_num else f"{val:,.{2 if monthly else 1}f}"
+        col_.markdown(f"<div style='text-transform:uppercase;letter-spacing:0.08em;font-size:0.72rem;color:#BFBFBF'>{cls[i]['id']}, {lab_sfx5}</div>"
+                      f"<div style='font-size:2.0rem;font-weight:600;color:{CLASS_COL[cls[i]['id']]}'>{txt5} <span style='font-size:1rem;color:#8C8C8C'>{unit5}</span></div>",
+                      unsafe_allow_html=True)
     tag("5-table")
     with st.expander("Show the numbers"):
         sdf = pd.DataFrame({cls[i]["id"]: ([sum((R["sats"][jj][i] if measure.startswith("Number") else R["comp_cls"][jj][i]) for jj in range(j + 1)) for j in range(6)] if cum4
@@ -682,49 +706,60 @@ with tab_plan:
     # ----------------------------------------------------------------------------------------------- 5. closing the gap
     st.markdown("## Annual gigawatts of compute constrained by resource")
     gp = R["gap_parts"]
-    parts = [("Orbit and satellite mix", "mix", G2), ("Flights alone", "flights", WHITE), ("Solar alone", "solar", G1), ("Flights and solar together", "together", ACC), ("Chips", "chips", G3)]
+    parts = [("Orbit and satellite mix", "mix", G2), ("Flights alone", "flights", WHITE), ("Solar alone", "solar", G1), ("Flights and solar together", "together", ACC), ("Chips", "chips", ACC2)]
     gc1, gc2 = st.columns([5.5, 1])
     with gc2:
         tag("6-controls")
-        gap_mode = st.radio("Show", ["GW", "% of target"], key="gaprel")
+        gap_mode = st.radio("Show", ["GW", "% of gap"], key="gaprel")
     rel_gap = gap_mode.startswith("%")
+    pos = {key_: [max(0, gp[key_][j]) for j in range(6)] for _, key_, _ in parts}
+    gap_yr = [sum(pos[key_][j] for _, key_, _ in parts) for j in range(6)]          # equals the gap to target
+    share = {key_: [pos[key_][j] / gap_yr[j] * 100 if gap_yr[j] > 1e-9 else 0 for j in range(6)] for _, key_, _ in parts}
     with gc1:
         fig = go.Figure()
         for lab, key_, col in parts:
             if rel_gap:
-                vals = [max(0, gp[key_][j]) / T[j] * 100 if T[j] else 0 for j in range(6)]
+                vals = share[key_]
                 texts = [f"{v:.0f}%" if v > 3 else "" for v in vals]
             else:
-                vals = [max(0, gp[key_][j]) * mf for j in range(6)]
+                vals = [v * mf for v in pos[key_]]
                 texts = [fmt(v, 1) if v > 0.05 * max(T) * mf else "" for v in vals]
             if sum(vals) > 1e-6:
                 fig.add_bar(x=YEARS, y=vals, name=lab, marker_color=col, text=texts, textposition="inside",
-                            insidetextfont=dict(color="#000000" if col in (WHITE, G1) else WHITE))
+                            insidetextfont=dict(color="#000000" if col in (WHITE, G1, ACC2) else WHITE))
         if not rel_gap:
             fig.add_scatter(x=YEARS, y=[x * mf for x in T], name="Target", mode="markers",
                             marker=dict(symbol="line-ew", size=40, line=dict(width=3, color=G2)))
-        fig.update_layout(barmode="stack", yaxis_title=("% of target" if rel_gap else unit_gw))
+        fig.update_layout(barmode="stack", yaxis_title=("% of gap" if rel_gap else unit_gw))
         fig = style_fig(fig, 400)
         if rel_gap:
             fig.update_yaxes(range=[0, 100], ticksuffix="%")
         tag("6-chart")
         st.plotly_chart(fig, use_container_width=True)
-    # 2028-33 totals per resource, font colored to match the legend
+    # 2028-33 totals per resource, font colored to match the legend.
+    # Cumulative % of gap = resource's 2028-33 GW / total 2028-33 gap (not an average of yearly %).
     tag("6-totals")
     lab_sfx6 = "avg / month, 2028-33" if monthly else "2028-33"
+    gap_total = sum(gap_yr)
     tc = st.columns(len(parts))
     for col_, (lab, key_, colr) in zip(tc, parts):
-        tot_gw = sum(max(0, gp[key_][j]) for j in range(6))
-        val = tot_gw / 72 if monthly else tot_gw
-        pct = tot_gw / cum_t if cum_t else 0
+        tot_gw = sum(pos[key_])
+        gw_txt = f"{(tot_gw / 72 if monthly else tot_gw):,.{2 if monthly else 1}f}"
+        pct = tot_gw / gap_total if gap_total > 1e-9 else 0
+        if rel_gap:
+            main_txt, small_txt = f"{pct:.0%}", f"{gw_txt} GW"
+        else:
+            main_txt, small_txt = f"{gw_txt} <span style='font-size:1rem;color:#8C8C8C'>GW</span>", f"{pct:.0%} of cumulative gap"
         col_.markdown(f"<div style='text-transform:uppercase;letter-spacing:0.08em;font-size:0.72rem;color:#BFBFBF'>{lab}, {lab_sfx6}</div>"
-                      f"<div style='font-size:2.0rem;font-weight:600;color:{colr}'>{val:,.{2 if monthly else 1}f} <span style='font-size:1rem;color:#8C8C8C'>GW</span></div>"
-                      f"<div style='font-size:0.8rem;color:#8C8C8C'>{pct:.0%} of target</div>", unsafe_allow_html=True)
+                      f"<div style='font-size:2.0rem;font-weight:600;color:{colr}'>{main_txt}</div>"
+                      f"<div style='font-size:0.8rem;color:#8C8C8C'>{small_txt}</div>", unsafe_allow_html=True)
     tag("6-table")
     with st.expander("Show the numbers"):
         if rel_gap:
-            gdf = pd.DataFrame({lab: [max(0, gp[key_][j]) / T[j] * 100 if T[j] else 0 for j in range(6)] for lab, key_, _ in parts}, index=YEARS).T
-            gdf.loc["Gap to target"] = [gp["gap"][j] / T[j] * 100 if T[j] else 0 for j in range(6)]
+            gdf = pd.DataFrame({lab: share[key_] for lab, key_, _ in parts}, index=YEARS).T
+            gdf["2028-33"] = [sum(pos[key_]) / gap_total * 100 if gap_total > 1e-9 else 0 for _, key_, _ in parts]
+            gdf.loc["Gap to target"] = [100.0 if gap_yr[j] > 1e-9 else 0 for j in range(6)] + [100.0 if gap_total > 1e-9 else 0]
+            st.markdown("**Share of each year's gap** (2028-33 column = share of the cumulative gap)")
             st.dataframe(gdf.map(lambda v: f"{v:.1f}%"), use_container_width=True)
         else:
             gdf = pd.DataFrame({lab: [gp[key_][j] * mf for j in range(6)] for lab, key_, _ in parts}, index=YEARS).T
@@ -860,7 +895,7 @@ with tab_plan:
     st.dataframe(cdf.map(fmt_cell), use_container_width=True)
 
     # ----------------------------------------------------------------------------------------------- 7. economics
-    st.markdown("## Economics of the selected case")
+    st.markdown("## Scenario economics")
     econ = selected_case_economics(inp, R, sol)
     if not econ["meaningful"]:
         tag("8-note")
@@ -874,8 +909,8 @@ with tab_plan:
         e = st.columns(4)
         e[0].metric("Value of compute (PV)", f"${pv['value']:,.0f}B", delta_color="off", delta_arrow="off")
         e[1].metric("Total cost (PV)", f"${pv['total']:,.0f}B", delta_color="off", delta_arrow="off")
-        e[2].metric("Indicative NPV", f"${pv['npv']:,.0f}B",
-                    f"${pv['npv_ex_base']:,.0f}B if base capacity is sunk", delta_color="off", delta_arrow="off")
+        e[2].markdown(f"<div style='padding-top:0.25rem'><div style='text-transform:uppercase;letter-spacing:0.08em;font-size:0.72rem;color:#BFBFBF'>NPV</div>"
+                      f"<div style='font-size:2.25rem;font-weight:600;color:{ACC};line-height:1.4'>${pv['npv']:,.0f}B</div></div>", unsafe_allow_html=True)
         if abs(plan_adds) < 5:
             e[3].metric("NPV the recommended plan adds", "≈ $0B",
                         "Selected case is the recommended plan", delta_color="off", delta_arrow="off")
@@ -893,8 +928,8 @@ with tab_plan:
                 ("Variable: satellite hardware (excluding chips and solar cells)", "hardware"),
                 ("Total cost", "total"),
                 ("Value of compute delivered (lifetime contribution)", "value"),
-                ("Indicative NPV, including base capacity capex", "npv"),
-                ("Indicative NPV, excluding base capacity capex", "npv_ex_base"),
+                ("NPV, including base capacity capex", "npv"),
+                ("NPV, excluding base capacity capex", "npv_ex_base"),
             ]
             edf = pd.DataFrame({lab: [y[k_][j] * mf for j in range(6)] for lab, k_ in rows}, index=YEARS).T
             edf["PV (2028 $)"] = [pv[k_] for _, k_ in rows]
