@@ -30,18 +30,22 @@ h1 { font-size: 1.9rem !important; } h2 { font-size: 1.15rem !important; margin-
 .rec { background: #0D0D0D; border: 1px solid #262626; border-radius: 10px; padding: 0.9rem 1.1rem; margin-bottom: 0.6rem; }
 .rec b { letter-spacing: 0.03em; }
 .pill { display:inline-block; border:1px solid #595959; border-radius: 999px; padding: 0.05rem 0.6rem; font-size: 0.78rem; color:#BFBFBF; margin-right:0.4rem; }
-/* Compact Streamlit chrome: header only as wide as its controls */
+/* Transparent header; keep Deploy on the right, sidebar toggle on the left */
 header[data-testid="stHeader"] {
   background: transparent !important;
-  width: auto !important;
-  left: auto !important;
-  right: 0 !important;
-  position: absolute !important;
 }
 div[data-testid="stToolbar"] {
-  width: fit-content !important;
-  max-width: fit-content !important;
   background: transparent !important;
+}
+/* Sidebar open/close control always sits on the left edge of the side panel */
+[data-testid="stExpandSidebarButton"],
+[data-testid="stSidebarCollapseButton"],
+header [data-testid="stBaseButton-headerNoPadding"],
+header button[kind="headerNoPadding"] {
+  position: fixed !important;
+  left: 0.4rem !important;
+  top: 0.55rem !important;
+  z-index: 100002 !important;
 }
 /* Overlay sidebar when open; let Streamlit collapse/close it */
 section[data-testid="stSidebar"] {
@@ -60,13 +64,6 @@ section[data-testid="stSidebar"] > div { overflow: visible !important; }
 section[data-testid="stSidebar"] [data-testid="stSidebarContent"] {
   overflow: auto !important;
   background: #0D0D0D !important;
-}
-/* Keep collapse control clickable above content */
-[data-testid="stSidebarCollapseButton"],
-[data-testid="stExpandSidebarButton"],
-button[kind="headerNoPadding"] {
-  z-index: 100001 !important;
-  position: relative !important;
 }
 /* Don't push main content aside for the sidebar */
 section.main, div[data-testid="stAppViewContainer"] > section.main,
