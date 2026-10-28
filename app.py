@@ -9,6 +9,7 @@ import streamlit as st
 
 from model.engine import run, load_defaults
 from model.solver import solve
+from model.economics import selected_case_economics
 from model import scenarios
 
 st.set_page_config(page_title="AI Satellite Launch Ramp", page_icon="🛰️", layout="wide")
@@ -777,24 +778,45 @@ with tab_plan:
     st.dataframe(cdf.map(fmt_cell), use_container_width=True)
 
     # ----------------------------------------------------------------------------------------------- 7. economics
-    st.markdown("## 7. Value of optimized plan")
-    tg = inp["toggles"]
-    if tg["launch_on"] == 0 or tg["solar_on"] == 0 or tg["chips_on"] == 0:
-        st.info("Economics not shown: with a limit switched off, that resource is treated as unlimited and free, so costs and NPV are not meaningful. Turn the limits back on to see the recommended plan's economics.")
+    st.markdown("## 7. Economics of the selected case (illustrative)")
+    st.markdown("<span class='muted'>Cost inputs and the $15/W/yr contribution are added assumptions; the case data has no costs. Present values in 2028 dollars at the discount rate. "
+                "Pre-tax; capacity left after 2033 gets no value.</span>", unsafe_allow_html=True)
+    econ = selected_case_economics(inp, R, sol)
+    if not econ["meaningful"]:
+        st.info("Economics not shown: with a limit switched off, that resource is treated as unlimited and free, so costs and NPV are not meaningful. Turn the limits back on to see the economics.")
     else:
-        pv = sol["pv"]; ud = sol["undiscounted"]
+        pv = econ["pv"]
+        y = econ["yearly"]
+        plan_npv = sol["pv"]["npv"]
+        plan_adds = plan_npv - pv["npv"]
         e = st.columns(4)
-        e[0].metric("Value of compute (PV)", f"${pv['value']:,.0f}B", "2028-2033", delta_color="off", delta_arrow="off")
-        e[1].metric("Total cost (PV)", f"${pv['total']:,.0f}B")
-        e[2].metric("Indicative NPV", f"${pv['npv']:,.0f}B")
-        e[3].metric("Undiscounted spend 2028-33", f"${ud['total']:,.0f}B", f"Capacity increases ${ud['new_capex'] + ud['base_capex']:,.0f}B", delta_color="off", delta_arrow="off")
+        e[0].metric("Value of compute (PV)", f"${pv['value']:,.0f}B", delta_color="off", delta_arrow="off")
+        e[1].metric("Total cost (PV)", f"${pv['total']:,.0f}B", delta_color="off", delta_arrow="off")
+        e[2].metric("Indicative NPV", f"${pv['npv']:,.0f}B",
+                    f"${pv['npv_ex_base']:,.0f}B if base capacity is sunk", delta_color="off", delta_arrow="off")
+        if abs(plan_adds) < 5:
+            e[3].metric("NPV the recommended plan adds", "≈ $0B",
+                        "Selected case is the recommended plan", delta_color="off", delta_arrow="off")
+        else:
+            e[3].metric("NPV the recommended plan adds", f"${plan_adds:,.0f}B",
+                        f"Plan NPV ${plan_npv:,.0f}B", delta_color="off", delta_arrow="off")
         with st.expander("Show the numbers"):
-            keys = [("Capex: new launch capacity", "new_launch"), ("Capex: new solar fab", "new_fab"), ("Capex: base launch capacity", "base_launch"), ("Capex: base solar fab", "base_fab"),
-                    ("Capex: base Terafab", "base_terafab"), ("Flight operations", "ops"), ("Solar cells", "cells"), ("Chips", "chips"), ("Satellite hardware", "hardware"),
-                    ("Total cost", "total"), ("Value of compute", "value"), ("Indicative NPV", "npv")]
-            edf = pd.DataFrame({lab: [sol["cost"][k_][j] * mf for j in range(6)] for lab, k_ in keys}, index=YEARS).T
-            edf["PV (2028 $)"] = [pv[k_] for _, k_ in keys]
+            rows = [
+                ("Capex: new capacity added by the Solver (only when the additions are applied)", "new_capex"),
+                ("Capex: base capacity not yet built (launch, solar fab, Terafab)", "base_capex"),
+                ("Variable: flight operations", "ops"),
+                ("Variable: solar cells (production cost)", "cells"),
+                ("Variable: chips (Orion production cost; Vega purchase price)", "chips"),
+                ("Variable: satellite hardware (excluding chips and solar cells)", "hardware"),
+                ("Total cost", "total"),
+                ("Value of compute delivered (lifetime contribution)", "value"),
+                ("Indicative NPV, including base capacity capex", "npv"),
+                ("Indicative NPV, excluding base capacity capex", "npv_ex_base"),
+            ]
+            edf = pd.DataFrame({lab: [y[k_][j] * mf for j in range(6)] for lab, k_ in rows}, index=YEARS).T
+            edf["PV (2028 $)"] = [pv[k_] for _, k_ in rows]
             st.dataframe(edf.map(lambda v: fmt(v, 1)), use_container_width=True)
+            st.download_button("Download CSV", edf.to_csv().encode(), "economics.csv", key="dl7")
 
     # ----------------------------------------------------------------------------------------------- 8. detail
     st.markdown("## 8. Detailed plan")
