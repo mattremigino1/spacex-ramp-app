@@ -939,18 +939,17 @@ with tab_plan:
     # ----------------------------------------------------------------------------------------------- 8. detail
     st.markdown("## Detailed plan")
     tag("9-table")
-    with st.expander("Selected scenario by year", expanded=False):
-        dr = {}
-        dr["Compute launched (GW)"] = [x * mf for x in real]
-        for i in range(4): dr[f"{cls[i]['id']} satellites"] = [R["sats"][j][i] * mf for j in range(6)]
-        dr["SSO flights"] = [x * mf for x in R["flights_sso"]]; dr["LEO flights"] = [x * mf for x in R["flights_leo"]]
-        dr["Solar used (GW)"] = [x * mf for x in R["solar_used"]]; dr["Orion chips used (M)"] = [x / 1e6 * mf for x in R["orion_used"]]
-        dr["Vega chips used (M)"] = [x / 1e6 * mf for x in R["vega_used"]]; dr["AI-related boards (k)"] = [x / 1e3 * mf for x in R["boards_ai"]]
-        dr["Mass to orbit (k tons)"] = [(R["mass_sso"][j] + R["mass_leo"][j]) / 1e3 * mf for j in range(6)]
-        dr["Compute in orbit, end of year (GW)"] = R["fleet_compute"]
-        ddf = pd.DataFrame(dr, index=YEARS).T
-        if not monthly:
-            ddf["2028-2033"] = ddf.sum(axis=1)
-            ddf.loc["Compute in orbit, end of year (GW)", "2028-2033"] = R["fleet_compute"][-1]
-        st.dataframe(ddf.map(lambda v: fmt(v, 2)), use_container_width=True)
-        st.download_button("Download CSV", ddf.to_csv().encode(), "plan.csv", key="dl8")
+    dr = {}
+    dr["Compute launched (GW)"] = [x * mf for x in real]
+    for i in range(4): dr[f"{cls[i]['id']} satellites"] = [R["sats"][j][i] * mf for j in range(6)]
+    dr["SSO flights"] = [x * mf for x in R["flights_sso"]]; dr["LEO flights"] = [x * mf for x in R["flights_leo"]]
+    dr["Solar used (GW)"] = [x * mf for x in R["solar_used"]]; dr["Orion chips used (M)"] = [x / 1e6 * mf for x in R["orion_used"]]
+    dr["Vega chips used (M)"] = [x / 1e6 * mf for x in R["vega_used"]]; dr["AI-related boards (k)"] = [x / 1e3 * mf for x in R["boards_ai"]]
+    dr["Mass to orbit (k tons)"] = [(R["mass_sso"][j] + R["mass_leo"][j]) / 1e3 * mf for j in range(6)]
+    dr["Compute in orbit, end of year (GW)"] = R["fleet_compute"]
+    ddf = pd.DataFrame(dr, index=YEARS).T
+    if not monthly:
+        ddf["2028-2033"] = ddf.sum(axis=1)
+        ddf.loc["Compute in orbit, end of year (GW)", "2028-2033"] = R["fleet_compute"][-1]
+    st.dataframe(ddf.map(lambda v: fmt(v, 2)), use_container_width=True)
+    st.download_button("Download CSV", ddf.to_csv().encode(), "plan.csv", key="dl8")
