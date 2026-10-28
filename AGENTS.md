@@ -4,7 +4,7 @@
 
 I'm Matt, interviewing for a Business Operations role on SpaceX's AI satellites team. The final round is a case on the **AI satellite launch ramp, 2028–33**. I deliver three things:
 
-1. An Excel model, sent in advance. The current version is "20261027 AI Satellite Ramp Case Model 2115.xlsx", which is not in this repo.
+1. An Excel model, sent in advance. The current version is "20261028 AI Satellite Ramp Case Model 0120.xlsx", which is not in this repo.
 2. A PowerPoint of about 10–15 minutes, which includes an "About me" section.
 3. **A live web-app demo of about 30 minutes. This repo is that app.**
 
@@ -64,12 +64,8 @@ tests/expected.json    Expected values for that test
 
 1. `load_defaults()` returns the inputs.
 2. The sidebar edits `st.session_state.inp`.
-3. `compute(json)` is cached with `st.cache_data`. It runs `solve(inp)`, then `run(inp, sol)`, then four comparison variants:
-   - Unconstrained;
-   - Constrained, seed mix;
-   - Constrained, optimized mix;
-   - Recommended plan.
-4. The sections render from `R` (the engine output) and `sol` (the solver output).
+3. `compute(json)` is cached with `st.cache_data`. It solves the plan for both mix settings (optimized and fixed), runs `run(inp, sol)`, runs three comparison variants (Unconstrained, Base case (constrained), Optimized (constrained)), and re-solves once per recommended addition with that addition blocked to value it.
+4. The sections render from `R` (the engine output), `sol` (the solver output) and `selected_case_economics()` (section 7).
 
 ### Engine concepts
 
