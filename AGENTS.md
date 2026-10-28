@@ -54,7 +54,7 @@ model/engine.py        The Excel model ported row by row: run(inp, solver=None) 
 model/solver.py        Target solver LP (scipy HiGHS): solve(inp) -> plan, costs, PV, undiscounted totals
 model/economics.py     Selected-case economics; mirrors section J of the Excel Summary tab
 model/defaults.json    Case data + toggles + added cost assumptions (the single source of inputs)
-model/scenarios.py     Presets: base, unconstrained, seed mix, recommended plan, 6 risk cases
+model/scenarios.py     Dropdown presets: Base case, Unconstrained (Run optimizer toggle gives the optimized case); seed mix, recommended plan and 6 risk cases kept for optional use
 tests/test_model.py    Regression test vs. results that tie to the Excel workbook
 tests/expected.json    Expected values for that test
 .streamlit/config.toml Dark theme

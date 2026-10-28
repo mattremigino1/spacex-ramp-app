@@ -60,7 +60,6 @@ def no_reuse(d):
 # Sidebar scenario dropdown (keep labels short).
 PRESETS = {
     "Base case (constrained)": base,
-    "Optimized (constrained)": recommended,  # apply_solver = 1
     "Unconstrained": unconstrained,
 }
 
