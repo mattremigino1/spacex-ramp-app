@@ -28,7 +28,7 @@ Opens at http://localhost:8501. No internet needed once the packages are install
 | 4. Satellites by class | Number or compute, annual or cumulative |
 | 5. Constrained compute by resource | Gap split into mix, flights alone, solar alone, flights + solar together, chips |
 | 6. Recommended plan | Solver actions in priority order, plus side-by-side cases |
-| 7. Costs and value | Cost stack ($ or %), value, indicative NPV, undiscounted spend (illustrative: costs are added assumptions) |
+| 7. Costs and value | Value, indicative NPV, undiscounted spend (costs are added assumptions) |
 | 8. Detailed plan | Year-by-year table with CSV download |
 
 The sidebar holds scenario presets (base, unconstrained, seed mix, recommended plan, six risk cases), all toggles, and every case input in editable tables.

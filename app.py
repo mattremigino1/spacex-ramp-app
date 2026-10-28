@@ -780,7 +780,7 @@ with tab_plan:
     st.dataframe(cdf.map(fmt_cell), use_container_width=True)
 
     # ----------------------------------------------------------------------------------------------- 7. economics
-    st.markdown("## 7. Costs and value of the recommended plan (illustrative)")
+    st.markdown("## 7. Costs and value of the recommended plan")
     pv = sol["pv"]; ud = sol["undiscounted"]
     e = st.columns(4)
     e[0].metric("Value of compute (PV)", f"${pv['value']:,.0f}B", "2028-2033", delta_color="off", delta_arrow="off")
