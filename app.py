@@ -329,15 +329,29 @@ def compute(inp_json):
                       ("Optimized (constrained)", dict(apply_solver=1))):
         v = copy.deepcopy(inp); v["toggles"].update(mod)
         variants[name] = run(v, sol)
-    # Mix-only optimized run (no additions) for recommendation card 1 GW delta — not shown in the table
+    # Mix-only optimized run (no additions) for the mix-action GW delta — not shown in the table
     v_opt_mix = copy.deepcopy(inp)
     v_opt_mix["toggles"].update(dict(mix="Optimized", apply_solver=0))
     opt_mix_R = run(v_opt_mix, sol)
-    return sol, R, variants, sol_opt, sol_cust, opt_mix_R
+    # Value each recommended addition by re-solving with that addition forbidden
+    action_vals = {}
+    for key, cap_key in (("fab", "cap_fab"), ("leo", "cap_leo"), ("sso", "cap_sso")):
+        if max(sol[cap_key]) > 1e-6:
+            blocked = solve(inp, block=[key])
+            action_vals[key] = {
+                "worth_B": blocked["objective"] - sol["objective"],
+                "gw_lost": sum(sol["compute"]) - sum(blocked["compute"]),
+            }
+    gw_mix = sum(opt_mix_R["realized"]) - sum(variants["Base case (constrained)"]["realized"])
+    action_vals["mix"] = {
+        "worth_B": sol_opt["pv"]["npv"] - sol_cust["pv"]["npv"],
+        "gw": gw_mix,
+    }
+    return sol, R, variants, sol_opt, sol_cust, opt_mix_R, action_vals
 
 
 try:
-    sol, R, VAR, sol_opt, sol_cust, opt_mix_R = compute(json.dumps(inp, sort_keys=True))
+    sol, R, VAR, sol_opt, sol_cust, opt_mix_R, action_vals = compute(json.dumps(inp, sort_keys=True))
 except Exception as ex:   # bad input (e.g., a zero payload)
     st.error(f"The model could not run with these inputs: {ex}")
     st.stop()
@@ -640,39 +654,120 @@ with tab_plan:
     st.markdown("## 6. Recommended plan and scenario comparison")
     st.markdown("<span class='muted'>Optimization maximizes economic value by determining how much launch and solar capacity needs to be added given targets and orbital + satellite mix requirements.</span>", unsafe_allow_html=True)
     c = inp["costs"]
-    recs = []
-    opt_cum = sum(opt_mix_R["realized"]); seed_cum = sum(VAR["Base case (constrained)"]["realized"])
-    x_mix = opt_cum - seed_cum
-    if inp["toggles"]["mix"] == "Optimized":
-        recs.append(("Optimize class and orbit mix", f"+{x_mix:,.1f} GW 2028-33 vs. the seed mix, at no cost", "Now"))
-    else:
-        npv_delta = sol_opt["pv"]["npv"] - sol_cust["pv"]["npv"]
-        recs.append(("Class mix held at the seed mix",
-                     f"Switching to the optimized mix would add {x_mix:.1f} GW 2028-33 at current resources and change the recommended plan's NPV by {npv_delta:+,.0f}B.",
-                     "Your choice"))
-    fab = sol["cap_fab"]
-    if max(fab) > 1e-6:
+
+    def _worth_line(worth_B, gw_lost):
+        base = f"Worth ${worth_B:,.0f}B NPV"
+        if gw_lost > 0.05:
+            return base + f"; without it the plan delivers {gw_lost:,.1f} GW less"
+        return base + "; without it the target is still met, but at higher cost"
+
+    def _flight_steps(cap):
+        j0 = next(j for j in range(6) if cap[j] > 1e-6)
+        steps = ", ".join(f"{cap[j]:,.0f} by {YEARS[j]}" for j in range(j0, 6) if j == j0 or cap[j] > cap[j - 1] + 1)
+        return j0, steps
+
+    def _chip_capped(j):
+        """True if every chip type with supply > 0 is fully used in year j (or cumulatively with carry)."""
+        if inp["toggles"]["chips_on"] != 1:
+            return False
+        carry = inp["toggles"]["chip_carry"] == 1
+        checks = []
+        for used_m, supply in ((sol["orion_used"], inp["orion"]), (sol["vega_used"], inp["vega"])):
+            if carry:
+                sup = sum(supply[: j + 1])
+                if sup <= 0:
+                    continue
+                checks.append(sum(used_m[: j + 1]) * 1e6 >= 0.995 * sup)
+            else:
+                if supply[j] <= 0:
+                    continue
+                checks.append(used_m[j] * 1e6 >= 0.995 * supply[j])
+        return bool(checks) and all(checks)
+
+    def _short_phrase(pairs):
+        parts = [f"{gw:.1f} GW in {y}" for y, gw in pairs]
+        if len(parts) == 1:
+            return parts[0]
+        if len(parts) == 2:
+            return f"{parts[0]} and {parts[1]}"
+        return ", ".join(parts[:-1]) + f", and {parts[-1]}"
+
+    # Pro-rate new-launch PV capex by orbit (new capacity × availability)
+    aL = [1 if y >= c["launch_first"] else 0 for y in YEARS]
+    sso_w = sum(sol["new_sso"][j] * aL[j] for j in range(6))
+    leo_w = sum(sol["new_leo"][j] * aL[j] for j in range(6))
+    launch_w = sso_w + leo_w
+    sso_capex = sol["pv"]["new_launch"] * sso_w / launch_w if launch_w > 0 else 0.0
+    leo_capex = sol["pv"]["new_launch"] * leo_w / launch_w if launch_w > 0 else 0.0
+
+    action_cards = []  # (worth_B, title, worth_line, detail, pill)
+
+    if "fab" in action_vals:
+        fab = sol["cap_fab"]
         y0 = YEARS[next(j for j in range(6) if fab[j] > 1e-6)]
-        recs.append(("Commit a solar fab", f"{fab[next(j for j in range(6) if fab[j] > 1e-6)]:,.1f} GW/yr usable in {y0}, growing to {fab[-1]:,.1f} GW/yr by {YEARS[-1]}; "
-                     f"${sol['pv']['new_fab']:,.0f}B capex (PV)", f"Decide {y0 - c['fab_lead']}"))
-    for orb, key_ in (("LEO", "cap_leo"), ("SSO", "cap_sso")):
-        cap = sol[key_]
-        if max(cap) > 1e-6:
-            j0 = next(j for j in range(6) if cap[j] > 1e-6)
-            steps = ", ".join(f"{cap[j]:,.0f} by {YEARS[j]}" for j in range(j0, 6) if j == j0 or cap[j] > cap[j - 1] + 1)
-            recs.append((f"Add {orb} launch capacity", f"Extra flights per year: {steps}", f"Start {YEARS[j0] - c['launch_lead']}"))
-    if sol["pv"]["new_launch"] > 0:
-        recs[-1] = (recs[-1][0], recs[-1][1] + f"; ${sol['pv']['new_launch']:,.0f}B capex (PV) for all new launch capacity", recs[-1][2])
-    short = [(YEARS[j], sol["shortfall"][j]) for j in range(6) if sol["shortfall"][j] > 0.01]
+        av = action_vals["fab"]
+        detail = (f"{fab[next(j for j in range(6) if fab[j] > 1e-6)]:,.1f} GW/yr usable in {y0}, "
+                  f"growing to {fab[-1]:,.1f} GW/yr by {YEARS[-1]}; ${sol['pv']['new_fab']:,.0f}B capex (PV)")
+        action_cards.append((av["worth_B"], "Commit a solar fab", _worth_line(av["worth_B"], av["gw_lost"]),
+                             detail, f"Decide {y0 - c['fab_lead']}"))
+
+    for orb, key, cap_key, new_key, orbit_capex in (
+        ("LEO", "leo", "cap_leo", "new_leo", leo_capex),
+        ("SSO", "sso", "cap_sso", "new_sso", sso_capex),
+    ):
+        if key not in action_vals:
+            continue
+        cap = sol[cap_key]
+        j0, steps = _flight_steps(cap)
+        av = action_vals[key]
+        detail = f"Extra flights per year: {steps}"
+        if orbit_capex > 0:
+            detail += f"; ${orbit_capex:,.0f}B capex (PV)"
+        action_cards.append((av["worth_B"], f"Add {orb} launch capacity", _worth_line(av["worth_B"], av["gw_lost"]),
+                             detail, f"Start {YEARS[j0] - c['launch_lead']}"))
+
+    mix_v = action_vals["mix"]
+    if inp["toggles"]["mix"] == "Optimized":
+        action_cards.append((mix_v["worth_B"], "Run the optimized class and orbit mix",
+                             f"Worth ${mix_v['worth_B']:,.0f}B NPV and +{mix_v['gw']:.1f} GW at current resources, at no cost",
+                             "", "Now"))
+    else:
+        action_cards.append((mix_v["worth_B"], "Class mix held at the seed mix",
+                             f"Holding it costs ${mix_v['worth_B']:,.0f}B NPV and {mix_v['gw']:.1f} GW at current resources",
+                             "", "Your choice"))
+
+    action_cards.sort(key=lambda t: t[0], reverse=True)
+
+    for i, (worth_B, title, worth_line, detail, pill) in enumerate(action_cards, 1):
+        body = worth_line if not detail else f"{worth_line}<br>{detail}"
+        st.markdown(f"<div class='rec'><span class='pill'>{i}</span><b>{title}</b> <span class='pill'>{pill}</span><br>"
+                    f"<span class='muted'>{body}</span></div>", unsafe_allow_html=True)
+
+    # Remaining-gap card last (not ranked with actions)
+    short = [(YEARS[j], sol["shortfall"][j], j) for j in range(6) if sol["shortfall"][j] > 0.01]
     if short:
-        chip_lim = inp["toggles"]["chips_on"] == 1
-        recs.append(("Close the remaining gap with chips" if chip_lim else "Remaining gap is not worth closing at these economics",
-                     "Still short: " + ", ".join(f"{s_:,.1f} GW in {y}" for y, s_ in short) + (". Chip supply binds there: pull Vega forward or add early Orion volume" if chip_lim else ""),
-                     "Next contract"))
-    for i, (h, body, when) in enumerate(recs, 1):
-        # Timing / choice pill only on card 1 (cards 2+ keep no timing labels)
-        when_html = f" <span class='pill'>{when}</span>" if i == 1 else ""
-        st.markdown(f"<div class='rec'><span class='pill'>{i}</span><b>{h}</b>{when_html}<br><span class='muted'>{body}</span></div>", unsafe_allow_html=True)
+        chip_yrs = [(y, g) for y, g, j in short if _chip_capped(j)]
+        econ_yrs = [(y, g) for y, g, j in short if not _chip_capped(j)]
+        parts = []
+        if chip_yrs:
+            parts.append(f"Short {_short_phrase(chip_yrs)}. Pull Vega forward or add early Orion volume.")
+        if econ_yrs:
+            contrib = inp["costs"]["contribution"]
+            parts.append(f"Short {_short_phrase(econ_yrs)}: closing it would cost more than the compute is worth at ${contrib:g}/W/yr.")
+        if chip_yrs and not econ_yrs:
+            title = "Chips cap the plan"
+            pill = "Next contract"
+        elif econ_yrs and not chip_yrs:
+            title = "Remaining gap not worth closing at these economics"
+            pill = "Revisit if economics change"
+        else:
+            title = "Remaining gap"
+            pill = "Next contract"
+        n = len(action_cards) + 1
+        st.markdown(f"<div class='rec'><span class='pill'>{n}</span><b>{title}</b> <span class='pill'>{pill}</span><br>"
+                    f"<span class='muted'>{' '.join(parts)}</span></div>", unsafe_allow_html=True)
+
+    st.caption("Ranked by value at stake: the NPV lost if that action is dropped and the Solver re-plans without it. Illustrative economics.")
 
     comp_rows = {}
     for name, Rv in VAR.items():
