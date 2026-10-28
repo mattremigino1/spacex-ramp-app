@@ -49,67 +49,68 @@ header[data-testid="stHeader"] #MainMenu {
 header[data-testid="stHeader"] #MainMenu button {
   pointer-events: auto !important;
 }
-/* Expand control when sidebar is closed — always reachable top-left */
-[data-testid="stExpandSidebarButton"],
-[data-testid="collapsedControl"] {
-  position: fixed !important;
-  left: 0.4rem !important;
-  top: 0.55rem !important;
-  z-index: 100002 !important;
-  display: block !important;
-  visibility: visible !important;
-}
-/* Overlay sidebar: Streamlit 1.66+ uses data-collapsed (not aria-expanded on the section).
-   Keep the sidebar out of flex flow so main content never shifts. */
+/* Overlay sidebar out of flex flow so main content never shifts.
+   Streamlit 1.66+ uses data-collapsed on the section. */
 section[data-testid="stSidebar"] {
   position: fixed !important;
   top: 0 !important;
-  height: 100vh !important;
-  z-index: 100000 !important;
-  transition: none !important;
-}
-section[data-testid="stSidebar"][data-collapsed="false"],
-section[data-testid="stSidebar"][aria-expanded="true"] {
   left: 0 !important;
+  height: 100vh !important;
   width: 24rem !important;
   min-width: 24rem !important;
   max-width: 24rem !important;
+  z-index: 100000 !important;
+  transition: transform 0.2s ease, visibility 0.2s ease !important;
+}
+section[data-testid="stSidebar"][data-collapsed="false"] {
   transform: none !important;
   visibility: visible !important;
   pointer-events: auto !important;
 }
-section[data-testid="stSidebar"][data-collapsed="true"],
-section[data-testid="stSidebar"][aria-expanded="false"] {
-  left: -30rem !important;
-  width: 0 !important;
-  min-width: 0 !important;
-  max-width: 0 !important;
-  transform: none !important;
+section[data-testid="stSidebar"][data-collapsed="true"] {
+  transform: translateX(-100%) !important;
   visibility: hidden !important;
   pointer-events: none !important;
 }
-section[data-testid="stSidebar"][data-collapsed="false"] > div,
-section[data-testid="stSidebar"][aria-expanded="true"] > div {
-  height: 100% !important;
-  overflow: hidden !important;
-}
-section[data-testid="stSidebar"][data-collapsed="false"] [data-testid="stSidebarContent"],
-section[data-testid="stSidebar"][aria-expanded="true"] [data-testid="stSidebarContent"] {
+section[data-testid="stSidebar"] [data-testid="stSidebarContent"] {
   height: 100vh !important;
   max-height: 100vh !important;
   overflow-y: auto !important;
   overflow-x: hidden !important;
   background: #0D0D0D !important;
 }
-/* Collapse chevron inside the open sidebar */
-section[data-testid="stSidebar"][data-collapsed="false"] [data-testid="stSidebarCollapseButton"],
-section[data-testid="stSidebar"][aria-expanded="true"] [data-testid="stSidebarCollapseButton"],
-section[data-testid="stSidebar"][data-collapsed="false"] button[kind="headerNoPadding"],
-section[data-testid="stSidebar"][aria-expanded="true"] button[kind="headerNoPadding"] {
-  position: sticky !important;
-  top: 0.4rem !important;
-  z-index: 100001 !important;
-  display: inline-flex !important;
+[data-testid="stSidebarHeader"] {
+  position: relative !important;
+  min-height: 2.75rem !important;
+}
+/* Collapse control: pin top-right of open sidebar, above everything in it */
+section[data-testid="stSidebar"][data-collapsed="false"] [data-testid="stSidebarCollapseButton"] {
+  position: fixed !important;
+  top: 0.55rem !important;
+  left: 21.2rem !important;
+  right: auto !important;
+  z-index: 100003 !important;
+  display: flex !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
+}
+/* Expand control: top-left only when sidebar is closed.
+   Never force it visible while open — that blocked the collapse click. */
+[data-testid="stExpandSidebarButton"] {
+  position: fixed !important;
+  left: 0.4rem !important;
+  top: 0.55rem !important;
+  z-index: 100002 !important;
+}
+body:has(section[data-testid="stSidebar"][data-collapsed="false"]) [data-testid="stExpandSidebarButton"] {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+body:has(section[data-testid="stSidebar"][data-collapsed="true"]) [data-testid="stExpandSidebarButton"] {
+  display: block !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
 }
 /* Don't push main content aside for the sidebar */
 section.main,
@@ -149,10 +150,10 @@ div.st-key-preset_box input {
 
 
 def style_fig(fig, h=380, legend=True):
-    # Extra top margin so a wrapping horizontal legend never sits on the bars
-    fig.update_layout(uniformtext_minsize=10, uniformtext_mode="hide", template="plotly_dark", paper_bgcolor=BG, plot_bgcolor=BG, height=h, margin=dict(l=10, r=10, t=72, b=10),
+    # Legend below the plot so it never overlaps bars (any toggle / wrap length)
+    fig.update_layout(uniformtext_minsize=10, uniformtext_mode="hide", template="plotly_dark", paper_bgcolor=BG, plot_bgcolor=BG, height=h, margin=dict(l=10, r=10, t=20, b=90),
                       font=dict(family="Barlow, Arial", color=WHITE, size=13), showlegend=legend,
-                      legend=dict(orientation="h", y=1.22, x=0, yanchor="bottom", bgcolor="rgba(0,0,0,0)"), hoverlabel=dict(bgcolor="#111111"))
+                      legend=dict(orientation="h", y=-0.22, x=0, yanchor="top", bgcolor="rgba(0,0,0,0)"), hoverlabel=dict(bgcolor="#111111"))
     fig.update_xaxes(showgrid=False, linecolor=G3, tickfont=dict(color=G1))
     fig.update_yaxes(showgrid=True, gridcolor="#1A1A1A", zeroline=False, tickfont=dict(color=G2))
     return fig
@@ -529,9 +530,7 @@ with tab_plan:
         vals = [lev[j][i] * 100 for j in range(6)]
         fig.add_bar(x=YEARS, y=vals, name=l, marker_color=lc[i], text=[f"{v:.0f}%" if v >= 4 else "" for v in vals], textposition="inside", insidetextfont=dict(color="#000000" if lc[i] in (WHITE, G1) else WHITE))
     fig.update_layout(barmode="stack", yaxis=dict(range=[0, 100], ticksuffix="%"))
-    style_fig(fig, 360)
-    fig.update_layout(margin=dict(l=10, r=10, t=70, b=10), legend=dict(orientation="h", y=1.18, x=0, bgcolor="rgba(0,0,0,0)"))
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(style_fig(fig, 360), use_container_width=True)
     if inp["toggles"]["mix"] == "Optimized":
         st.caption("Share of the next unit of compute each limit would unlock (marginal view). A year at 0% everywhere has met its target.")
     else:
