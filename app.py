@@ -249,8 +249,7 @@ with st.sidebar:
     tag("S-optimizer")
     t["apply_solver"] = int(st.toggle("Run optimizer", value=t.get("apply_solver", 0) == 1, key=k("apply"),
                                       help="Adds optimal levels of launch and solar capacity to unlock compute and maximize economic value"))
-    tag("S-monthly")
-    monthly = st.toggle("Show flows per month", value=False, help="Monthly = average monthly pace (each year split evenly). Cumulative views are switched off.")
+    monthly = False   # monthly view removed from the UI (an even split of each year is not a real monthly ramp)
 
     st.markdown("### Constraints")
     tag("S-flight-limit")

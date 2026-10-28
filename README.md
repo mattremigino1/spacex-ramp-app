@@ -21,7 +21,7 @@ Opens at http://localhost:8501. No internet needed once the packages are install
 
 | Section | What it shows |
 |---|---|
-| Headline | Selected scenario vs. target, what binds by year, big numbers (per-month averages when monthly is on) |
+| Headline | Selected scenario vs. target, what binds by year, big numbers |
 | Compute vs. target | Annual or cumulative; total, by orbit, generation, or class |
 | Constraint utilization | Heat map, two tabs: what binds in the selected case today, and what the recommended plan needs vs. case supply; drill into any row for units |
 | Annual resource gaps | Stacked bars by year: resource available in the selected scenario (gray) plus the gap to the optimized plan (blue), with 2028-33 totals |

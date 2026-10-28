@@ -4,7 +4,7 @@
 
 I'm Matt, interviewing for a Business Operations role on SpaceX's AI satellites team. The final round is a case on the **AI satellite launch ramp, 2028–33**. I deliver three things:
 
-1. An Excel model, sent in advance. The current version is "20261028 AI Satellite Ramp Case Model vFINAL.xlsx", which is not in this repo.
+1. An Excel model, sent in advance. The current version is "20261028 AI Satellite Ramp Case Model vSHARE.xlsx", which is not in this repo.
 2. A PowerPoint of about 10–15 minutes, which includes an "About me" section.
 3. **A live web-app demo of about 30 minutes. This repo is that app.**
 
@@ -101,7 +101,7 @@ The solver must stay identical to the Excel Solver setup.
 
    - If you intentionally change model logic, say so explicitly. The Excel model must then be changed the same way, and I do that separately.
 2. **The UI layer must not "fix" model results.** No rounding hacks and no overriding values in `app.py`. Display only.
-3. **Monthly mode:** values are annual ÷ 12, labeled "per month". **No cumulative views when monthly is on.**
+3. **No monthly view.** It was removed on purpose: annual ÷ 12 is not a real month-by-month ramp. Don't add it back unless the model gains true monthly phasing.
 4. **Labels and notes use plain English. Never use Excel cell or row references** such as "row 113" or "E72" in anything a user sees.
 5. **Costs are labeled illustrative.** They are added assumptions, not case data.
 6. **No Excel badge or branding.** Keep the SpaceX-like look: black background, white text, one blue accent (#4A90E2), Barlow font, uppercase section headers.
