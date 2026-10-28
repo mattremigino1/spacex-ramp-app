@@ -597,7 +597,6 @@ with tab_plan:
         if rel_gap:
             fig.update_yaxes(range=[0, 100], ticksuffix="%")
         st.plotly_chart(fig, use_container_width=True)
-    st.caption("Each single-limit bar is the model with only that limit removed; what neither closes alone needs flights and solar lifted together.")
     with st.expander("Show the numbers"):
         if rel_gap:
             gdf = pd.DataFrame({lab: [max(0, gp[key_][j]) / T[j] * 100 if T[j] else 0 for j in range(6)] for lab, key_, _ in parts}, index=YEARS).T
