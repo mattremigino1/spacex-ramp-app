@@ -487,16 +487,17 @@ with tab_plan:
             elif rkey == "Solar":
                 supply, uses = case_sol, plan_sol; unit = "GW"
             else:
-                supply = [w / 1e9 for w in case_chip_w]  # watts -> GW
-                uses = [w / 1e9 for w in plan_chip_w]
-                unit = "effective GW"
+                # Chip counts (solver chip uses are stored in millions)
+                supply = [inp["orion"][j] + inp["vega"][j] for j in range(6)]
+                uses = [sol["orion_used"][j] * 1e6 + sol["vega_used"][j] * 1e6 for j in range(6)]
+                unit = "chips"
             dd2 = pd.DataFrame({
                 "Base supply": [supply[j] * f for j in range(6)],
                 "Recommended plan uses": [uses[j] * f for j in range(6)],
                 "To add (plan − case, floor 0)": [max(0, uses[j] - supply[j]) * f for j in range(6)],
             }, index=YEARS).T
             st.markdown(f"**{pick2}** ({unit}{' per month' if monthly else ' per year'})")
-            st.dataframe(dd2.map(lambda v: fmt(v, 2 if unit.endswith("GW") else 1)), use_container_width=True)
+            st.dataframe(dd2.map(lambda v: fmt(v, 2 if unit == "GW" else 1)), use_container_width=True)
 
     # ----------------------------------------------------------------------------------------------- 3. lever strength
     st.markdown("## 3. Which limit to relieve first")
