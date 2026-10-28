@@ -37,20 +37,21 @@ header[data-testid="stHeader"] {
 div[data-testid="stToolbar"] {
   background: transparent !important;
 }
-/* Streamlit ⋮ menu pinned to the left */
+/* Streamlit ⋮ menu pinned to the right */
 #MainMenu {
   position: fixed !important;
-  left: 0.35rem !important;
+  left: auto !important;
+  right: 0.5rem !important;
   top: 0.4rem !important;
   z-index: 100003 !important;
 }
-/* Sidebar open/close sits just right of the ⋮ menu */
+/* Sidebar open/close stays on the left edge */
 [data-testid="stExpandSidebarButton"],
 [data-testid="stSidebarCollapseButton"],
 header [data-testid="stBaseButton-headerNoPadding"],
 header button[kind="headerNoPadding"] {
   position: fixed !important;
-  left: 2.6rem !important;
+  left: 0.4rem !important;
   top: 0.55rem !important;
   z-index: 100002 !important;
 }
