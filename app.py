@@ -30,6 +30,14 @@ h1 { font-size: 1.9rem !important; } h2 { font-size: 1.15rem !important; margin-
 .rec { background: #0D0D0D; border: 1px solid #262626; border-radius: 10px; padding: 0.9rem 1.1rem; margin-bottom: 0.6rem; }
 .rec b { letter-spacing: 0.03em; }
 .pill { display:inline-block; border:1px solid #595959; border-radius: 999px; padding: 0.05rem 0.6rem; font-size: 0.78rem; color:#BFBFBF; margin-right:0.4rem; }
+/* Compact Streamlit chrome: no full-bleed toolbar bar */
+header[data-testid="stHeader"] { background: transparent !important; }
+div[data-testid="stToolbar"] {
+  width: fit-content !important;
+  max-width: fit-content !important;
+  margin-left: auto !important;
+  background: transparent !important;
+}
 </style>
 """, unsafe_allow_html=True)
 
