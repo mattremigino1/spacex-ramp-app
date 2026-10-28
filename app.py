@@ -226,7 +226,7 @@ with tab_data:
         be = st.data_editor(bdf, key=k("boards"), use_container_width=True)
         for b in inp["boards"]:
             b["a"], b["b"], b["ai"] = float(be.loc[b["name"], "Helios-A"]), float(be.loc[b["name"], "Helios-B"]), bool(be.loc[b["name"], "AI-related"])
-    with st.expander("Costs and value (added inputs)"):
+    with st.expander("Costs and value"):
         c = inp["costs"]
         st.caption("The case has no cost data: these are added assumptions with public-source ranges (see the Excel model notes).")
         fields = [("launch_capex", "New launch capacity, $M per extra flight/yr", 1.0), ("ops", "Operating cost per flight, $M", 1.0),
