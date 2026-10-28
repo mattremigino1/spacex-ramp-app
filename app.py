@@ -37,19 +37,21 @@ header[data-testid="stHeader"] {
 div[data-testid="stToolbar"] {
   background: transparent !important;
 }
-/* Streamlit ⋮ menu pinned to the right */
-#MainMenu {
+/* ⋮ menu on the right — do NOT use the broad headerNoPadding selector
+   (that also matches #MainMenu and was pinning the menu on the left). */
+header[data-testid="stHeader"] #MainMenu {
   position: fixed !important;
-  left: auto !important;
-  right: 0.5rem !important;
-  top: 0.4rem !important;
-  z-index: 100003 !important;
+  top: 0.55rem !important;
+  right: 1rem !important;
+  left: unset !important;
+  z-index: 1000100 !important;
 }
-/* Sidebar open/close stays on the left edge */
+header[data-testid="stHeader"] #MainMenu button {
+  pointer-events: auto !important;
+}
+/* Sidebar open/close only — specific testids, not all header buttons */
 [data-testid="stExpandSidebarButton"],
-[data-testid="stSidebarCollapseButton"],
-header [data-testid="stBaseButton-headerNoPadding"],
-header button[kind="headerNoPadding"] {
+[data-testid="stSidebarCollapseButton"] {
   position: fixed !important;
   left: 0.4rem !important;
   top: 0.55rem !important;
