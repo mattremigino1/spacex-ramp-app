@@ -779,8 +779,8 @@ with tab_plan:
             st.dataframe(gdf.map(lambda v: fmt(v, 2)), use_container_width=True)
 
     # ----------------------------------------------------------------------------------------------- 6. recommendation
-    st.markdown("## Recommended plan and scenario comparison")
-    st.markdown("<span class='muted'>Optimization maximizes economic value by determining how much launch and solar capacity needs to be added given targets and orbital + satellite mix requirements.</span>", unsafe_allow_html=True)
+    st.markdown("## Optimized plan")
+    st.markdown("<span class='muted'>Optimization determines how much launch and solar capacity needs to be added, given targets and orbital + satellite mix requirements, to maximize economic value.</span>", unsafe_allow_html=True)
     c = inp["costs"]
 
     def _worth_line(worth_B, gw_lost, alone_gw=None):
@@ -897,7 +897,7 @@ with tab_plan:
         st.markdown(f"<div class='rec'>{tag_html('7-gap-card')}<span class='pill'>{n}</span><b>{title}</b><br>"
                     f"<span class='muted'>{' '.join(parts)}</span></div>", unsafe_allow_html=True)
 
-    st.caption("Ranked by value at stake: the NPV lost if that action is dropped and the optimizer re-plans without it. Illustrative economics.")
+    st.caption("Ranked by value at stake: the NPV lost if that action is dropped and the optimizer re-plans without it.")
 
     comp_rows = {}
     for name, Rv in VAR.items():
