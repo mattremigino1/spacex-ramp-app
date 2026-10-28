@@ -653,7 +653,7 @@ with tab_plan:
         st.dataframe(ldf, use_container_width=True)
 
     # ----------------------------------------------------------------------------------------------- 4. satellites
-    st.markdown("## Satellites launched by class")
+    st.markdown("## Annual satellite launches by class")
     cc1, cc2 = st.columns([5.5, 1])
     with cc2:
         tag("5-controls")
@@ -680,7 +680,7 @@ with tab_plan:
         st.dataframe(sdf.map(lambda v: f"{v:,.0f}" if measure.startswith("Number") else f"{v:,.2f}"), use_container_width=True)
 
     # ----------------------------------------------------------------------------------------------- 5. closing the gap
-    st.markdown("## Constrained compute by resource")
+    st.markdown("## Annual gigawatts of compute constrained by resource")
     gp = R["gap_parts"]
     parts = [("Orbit and satellite mix", "mix", G2), ("Flights alone", "flights", WHITE), ("Solar alone", "solar", G1), ("Flights and solar together", "together", ACC), ("Chips", "chips", G3)]
     gc1, gc2 = st.columns([5.5, 1])
@@ -709,6 +709,17 @@ with tab_plan:
             fig.update_yaxes(range=[0, 100], ticksuffix="%")
         tag("6-chart")
         st.plotly_chart(fig, use_container_width=True)
+    # 2028-33 totals per resource, font colored to match the legend
+    tag("6-totals")
+    lab_sfx6 = "avg / month, 2028-33" if monthly else "2028-33"
+    tc = st.columns(len(parts))
+    for col_, (lab, key_, colr) in zip(tc, parts):
+        tot_gw = sum(max(0, gp[key_][j]) for j in range(6))
+        val = tot_gw / 72 if monthly else tot_gw
+        pct = tot_gw / cum_t if cum_t else 0
+        col_.markdown(f"<div style='text-transform:uppercase;letter-spacing:0.08em;font-size:0.72rem;color:#BFBFBF'>{lab}, {lab_sfx6}</div>"
+                      f"<div style='font-size:2.0rem;font-weight:600;color:{colr}'>{val:,.{2 if monthly else 1}f} <span style='font-size:1rem;color:#8C8C8C'>GW</span></div>"
+                      f"<div style='font-size:0.8rem;color:#8C8C8C'>{pct:.0%} of target</div>", unsafe_allow_html=True)
     tag("6-table")
     with st.expander("Show the numbers"):
         if rel_gap:
