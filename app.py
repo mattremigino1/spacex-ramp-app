@@ -764,7 +764,7 @@ with tab_plan:
         st.markdown(f"<div class='rec'><span class='pill'>{n}</span><b>{title}</b><br>"
                     f"<span class='muted'>{' '.join(parts)}</span></div>", unsafe_allow_html=True)
 
-    st.caption("Ranked by value at stake: the NPV lost if that action is dropped and the Solver re-plans without it. Illustrative economics.")
+    st.caption("Ranked by value at stake: the NPV lost if that action is dropped and the optimizer re-plans without it. Illustrative economics.")
 
     comp_rows = {}
     for name, Rv in VAR.items():
