@@ -59,27 +59,41 @@ header[data-testid="stHeader"] #MainMenu button {
   display: block !important;
   visibility: visible !important;
 }
-/* Overlay ONLY while open. Always forcing left:0 was preventing close. */
-section[data-testid="stSidebar"][aria-expanded="true"] {
+/* Overlay sidebar: Streamlit 1.66+ uses data-collapsed (not aria-expanded on the section).
+   Keep the sidebar out of flex flow so main content never shifts. */
+section[data-testid="stSidebar"] {
   position: fixed !important;
-  left: 0 !important;
   top: 0 !important;
   height: 100vh !important;
+  z-index: 100000 !important;
+  transition: none !important;
+}
+section[data-testid="stSidebar"][data-collapsed="false"],
+section[data-testid="stSidebar"][aria-expanded="true"] {
+  left: 0 !important;
   width: 24rem !important;
   min-width: 24rem !important;
-  z-index: 100000 !important;
+  max-width: 24rem !important;
+  transform: none !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
 }
+section[data-testid="stSidebar"][data-collapsed="true"],
 section[data-testid="stSidebar"][aria-expanded="false"] {
   left: -30rem !important;
   width: 0 !important;
   min-width: 0 !important;
+  max-width: 0 !important;
+  transform: none !important;
   visibility: hidden !important;
   pointer-events: none !important;
 }
+section[data-testid="stSidebar"][data-collapsed="false"] > div,
 section[data-testid="stSidebar"][aria-expanded="true"] > div {
   height: 100% !important;
   overflow: hidden !important;
 }
+section[data-testid="stSidebar"][data-collapsed="false"] [data-testid="stSidebarContent"],
 section[data-testid="stSidebar"][aria-expanded="true"] [data-testid="stSidebarContent"] {
   height: 100vh !important;
   max-height: 100vh !important;
@@ -88,7 +102,9 @@ section[data-testid="stSidebar"][aria-expanded="true"] [data-testid="stSidebarCo
   background: #0D0D0D !important;
 }
 /* Collapse chevron inside the open sidebar */
+section[data-testid="stSidebar"][data-collapsed="false"] [data-testid="stSidebarCollapseButton"],
 section[data-testid="stSidebar"][aria-expanded="true"] [data-testid="stSidebarCollapseButton"],
+section[data-testid="stSidebar"][data-collapsed="false"] button[kind="headerNoPadding"],
 section[data-testid="stSidebar"][aria-expanded="true"] button[kind="headerNoPadding"] {
   position: sticky !important;
   top: 0.4rem !important;
@@ -96,9 +112,15 @@ section[data-testid="stSidebar"][aria-expanded="true"] button[kind="headerNoPadd
   display: inline-flex !important;
 }
 /* Don't push main content aside for the sidebar */
-section.main, div[data-testid="stAppViewContainer"] > section.main,
+section.main,
+div[data-testid="stAppViewContainer"] > section.main,
+main#stMain,
+.stMain,
 div[data-testid="stAppViewContainer"] {
   margin-left: 0 !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  flex: 1 1 100% !important;
 }
 div[data-testid="stMainBlockContainer"], .block-container {
   max-width: 100% !important;
@@ -532,7 +554,7 @@ with tab_plan:
         st.plotly_chart(style_fig(fig, 360), use_container_width=True)
 
     # ----------------------------------------------------------------------------------------------- 5. closing the gap
-    st.markdown("## 5. What closing the gap takes")
+    st.markdown("## 5. Constrained GWs by resource")
     gp = R["gap_parts"]
     parts = [("Mix: custom vs. optimized", "mix", G2), ("Flights alone", "flights", WHITE), ("Solar alone", "solar", G1), ("Flights and solar together", "together", ACC), ("Needs more chips", "chips", G3)]
     gc1, gc2 = st.columns([3, 1])
