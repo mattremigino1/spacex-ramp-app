@@ -103,6 +103,8 @@ k = lambda name: f"{name}_{V}"
 with st.sidebar:
     st.markdown("### Scenario")
     names = list(scenarios.PRESETS)
+    if st.session_state.preset not in names:
+        st.session_state.preset = names[0]
     st.selectbox("Preset", names, index=names.index(st.session_state.preset), key="preset_box", on_change=set_preset, label_visibility="collapsed")
     st.button("Reset to case data", on_click=reset, use_container_width=True)
     monthly = st.toggle("Show flows per month", value=False, help="Monthly = average monthly pace (each year split evenly). Cumulative views are switched off.")
