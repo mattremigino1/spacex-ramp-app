@@ -149,9 +149,10 @@ div.st-key-preset_box input {
 
 
 def style_fig(fig, h=380, legend=True):
-    fig.update_layout(uniformtext_minsize=10, uniformtext_mode="hide", template="plotly_dark", paper_bgcolor=BG, plot_bgcolor=BG, height=h, margin=dict(l=10, r=10, t=30, b=10),
+    # Extra top margin so a wrapping horizontal legend never sits on the bars
+    fig.update_layout(uniformtext_minsize=10, uniformtext_mode="hide", template="plotly_dark", paper_bgcolor=BG, plot_bgcolor=BG, height=h, margin=dict(l=10, r=10, t=72, b=10),
                       font=dict(family="Barlow, Arial", color=WHITE, size=13), showlegend=legend,
-                      legend=dict(orientation="h", y=1.08, x=0, bgcolor="rgba(0,0,0,0)"), hoverlabel=dict(bgcolor="#111111"))
+                      legend=dict(orientation="h", y=1.22, x=0, yanchor="bottom", bgcolor="rgba(0,0,0,0)"), hoverlabel=dict(bgcolor="#111111"))
     fig.update_xaxes(showgrid=False, linecolor=G3, tickfont=dict(color=G1))
     fig.update_yaxes(showgrid=True, gridcolor="#1A1A1A", zeroline=False, tickfont=dict(color=G2))
     return fig
@@ -349,7 +350,7 @@ with tab_plan:
 
     # ----------------------------------------------------------------------------------------------- 1. ramp vs target
     st.markdown("## 1. Compute launched vs. target")
-    c1, c2 = st.columns([3, 1])
+    c1, c2 = st.columns([5.5, 1])
     with c2:
         split = st.radio("Break out by", ["Total", "Orbit", "Generation", "Class and orbit"], key="split")
         cum = st.toggle("Cumulative", value=False, disabled=monthly, key="cum")
@@ -538,7 +539,7 @@ with tab_plan:
 
     # ----------------------------------------------------------------------------------------------- 4. satellites
     st.markdown("## 4. Satellites launched by class")
-    cc1, cc2 = st.columns([3, 1])
+    cc1, cc2 = st.columns([5.5, 1])
     with cc2:
         measure = st.radio("Measure", ["Number of satellites", "Compute (GW)"], key="satm")
         cum4 = st.toggle("Cumulative", value=False, disabled=monthly, key="cum4") and not monthly
@@ -556,21 +557,13 @@ with tab_plan:
     # ----------------------------------------------------------------------------------------------- 5. closing the gap
     st.markdown("## 5. Constrained GWs by resource")
     gp = R["gap_parts"]
-    parts = [("Mix: custom vs. optimized", "mix", G2), ("Flights alone", "flights", WHITE), ("Solar alone", "solar", G1), ("Flights and solar together", "together", ACC), ("Needs more chips", "chips", G3)]
-    gc1, gc2 = st.columns([3, 1])
+    parts = [("Orbit and satellite mix", "mix", G2), ("Flights alone", "flights", WHITE), ("Solar alone", "solar", G1), ("Flights and solar together", "together", ACC), ("Chips", "chips", G3)]
+    gc1, gc2 = st.columns([5.5, 1])
     with gc2:
         gap_mode = st.radio("Show", ["GW", "% of target"], key="gaprel")
     rel_gap = gap_mode.startswith("%")
     with gc1:
         fig = go.Figure()
-        if rel_gap:
-            deliv = [real[j] / T[j] * 100 if T[j] else 0 for j in range(6)]
-            fig.add_bar(x=YEARS, y=deliv, name="Delivered", marker_color="#1F1F1F",
-                        text=[f"{v:.0f}%" if v > 3 else "" for v in deliv], textposition="inside")
-        else:
-            deliv = [r_ * mf for r_ in real]
-            fig.add_bar(x=YEARS, y=deliv, name="Delivered", marker_color="#1F1F1F",
-                        text=[fmt(v, 1) for v in deliv], textposition="inside")
         for lab, key_, col in parts:
             if rel_gap:
                 vals = [max(0, gp[key_][j]) / T[j] * 100 if T[j] else 0 for j in range(6)]
@@ -585,7 +578,7 @@ with tab_plan:
             fig.add_scatter(x=YEARS, y=[x * mf for x in T], name="Target", mode="markers",
                             marker=dict(symbol="line-ew", size=40, line=dict(width=3, color=G2)))
         fig.update_layout(barmode="stack", yaxis_title=("% of target" if rel_gap else unit_gw))
-        fig = style_fig(fig, 380)
+        fig = style_fig(fig, 400)
         if rel_gap:
             fig.update_yaxes(range=[0, 100], ticksuffix="%")
         st.plotly_chart(fig, use_container_width=True)
@@ -593,7 +586,6 @@ with tab_plan:
     with st.expander("Show the numbers"):
         if rel_gap:
             gdf = pd.DataFrame({lab: [max(0, gp[key_][j]) / T[j] * 100 if T[j] else 0 for j in range(6)] for lab, key_, _ in parts}, index=YEARS).T
-            gdf.loc["Delivered"] = [real[j] / T[j] * 100 if T[j] else 0 for j in range(6)]
             gdf.loc["Gap to target"] = [gp["gap"][j] / T[j] * 100 if T[j] else 0 for j in range(6)]
             st.dataframe(gdf.map(lambda v: f"{v:.1f}%"), use_container_width=True)
         else:
@@ -652,7 +644,7 @@ with tab_plan:
     e[0].metric("Value of compute (PV)", f"${pv['value']:,.0f}B"); e[1].metric("Total cost (PV)", f"${pv['total']:,.0f}B")
     e[2].metric("Indicative NPV", f"${pv['npv']:,.0f}B", f"${pv['npv_ex_base']:,.0f}B if base capacity is sunk", delta_color="off", delta_arrow="off")
     e[3].metric("Undiscounted spend 2028-33", f"${ud['total']:,.0f}B", f"capex ${ud['new_capex'] + ud['base_capex']:,.0f}B", delta_color="off", delta_arrow="off")
-    ec1, ec2 = st.columns([3, 1])
+    ec1, ec2 = st.columns([5.5, 1])
     with ec2:
         rel = st.radio("Show", ["$B", "% of yearly cost"], key="costrel")
     comps = [("Chips", "chips", WHITE), ("Satellite hardware", "hardware", G1), ("Flight operations", "ops", G2), ("Solar cells", "cells", G3),
