@@ -635,7 +635,7 @@ with tab_plan:
                      "Still short: " + ", ".join(f"{s_:,.1f} GW in {y}" for y, s_ in short) + (". Chip supply binds there: pull Vega forward or add early Orion volume" if chip_lim else ""),
                      "Next contract"))
     for i, (h, body, when) in enumerate(recs, 1):
-        st.markdown(f"<div class='rec'><span class='pill'>{i}</span><b>{h}</b> <span class='pill'>{when}</span><br><span class='muted'>{body}</span></div>", unsafe_allow_html=True)
+        st.markdown(f"<div class='rec'><span class='pill'>{i}</span><b>{h}</b><br><span class='muted'>{body}</span></div>", unsafe_allow_html=True)
 
     comp_rows = {}
     for name, Rv in VAR.items():
