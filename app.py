@@ -610,8 +610,7 @@ with tab_plan:
 
     # ----------------------------------------------------------------------------------------------- 6. recommendation
     st.markdown("## 6. Recommended plan and case comparison")
-    st.markdown("<span class='muted'>The Solver chooses how much launch capacity and solar fab to add each year to minimize discounted cost plus the value of compute missed, "
-                "with chip supply fixed. It updates with every input.</span>", unsafe_allow_html=True)
+    st.markdown("<span class='muted'>Optimization maximizes economic value by determining how much launch and solar capacity needs to be added given targets and orbital + satellite mix requirements.</span>", unsafe_allow_html=True)
     c = inp["costs"]
     recs = []
     opt_cum = sum(VAR["Constrained, optimized mix"]["realized"]); seed_cum = sum(VAR["Constrained, seed mix"]["realized"])
