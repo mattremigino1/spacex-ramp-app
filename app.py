@@ -781,19 +781,23 @@ with tab_plan:
 
     # ----------------------------------------------------------------------------------------------- 7. economics
     st.markdown("## 7. Value of optimized plan")
-    pv = sol["pv"]; ud = sol["undiscounted"]
-    e = st.columns(4)
-    e[0].metric("Value of compute (PV)", f"${pv['value']:,.0f}B", "2028-2033", delta_color="off", delta_arrow="off")
-    e[1].metric("Total cost (PV)", f"${pv['total']:,.0f}B")
-    e[2].metric("Indicative NPV", f"${pv['npv']:,.0f}B")
-    e[3].metric("Undiscounted spend 2028-33", f"${ud['total']:,.0f}B", f"Capacity increases ${ud['new_capex'] + ud['base_capex']:,.0f}B", delta_color="off", delta_arrow="off")
-    with st.expander("Show the numbers"):
-        keys = [("Capex: new launch capacity", "new_launch"), ("Capex: new solar fab", "new_fab"), ("Capex: base launch capacity", "base_launch"), ("Capex: base solar fab", "base_fab"),
-                ("Capex: base Terafab", "base_terafab"), ("Flight operations", "ops"), ("Solar cells", "cells"), ("Chips", "chips"), ("Satellite hardware", "hardware"),
-                ("Total cost", "total"), ("Value of compute", "value"), ("Indicative NPV", "npv")]
-        edf = pd.DataFrame({lab: [sol["cost"][k_][j] * mf for j in range(6)] for lab, k_ in keys}, index=YEARS).T
-        edf["PV (2028 $)"] = [pv[k_] for _, k_ in keys]
-        st.dataframe(edf.map(lambda v: fmt(v, 1)), use_container_width=True)
+    tg = inp["toggles"]
+    if tg["launch_on"] == 0 or tg["solar_on"] == 0 or tg["chips_on"] == 0:
+        st.info("Economics not shown: with a limit switched off, that resource is treated as unlimited and free, so costs and NPV are not meaningful. Turn the limits back on to see the recommended plan's economics.")
+    else:
+        pv = sol["pv"]; ud = sol["undiscounted"]
+        e = st.columns(4)
+        e[0].metric("Value of compute (PV)", f"${pv['value']:,.0f}B", "2028-2033", delta_color="off", delta_arrow="off")
+        e[1].metric("Total cost (PV)", f"${pv['total']:,.0f}B")
+        e[2].metric("Indicative NPV", f"${pv['npv']:,.0f}B")
+        e[3].metric("Undiscounted spend 2028-33", f"${ud['total']:,.0f}B", f"Capacity increases ${ud['new_capex'] + ud['base_capex']:,.0f}B", delta_color="off", delta_arrow="off")
+        with st.expander("Show the numbers"):
+            keys = [("Capex: new launch capacity", "new_launch"), ("Capex: new solar fab", "new_fab"), ("Capex: base launch capacity", "base_launch"), ("Capex: base solar fab", "base_fab"),
+                    ("Capex: base Terafab", "base_terafab"), ("Flight operations", "ops"), ("Solar cells", "cells"), ("Chips", "chips"), ("Satellite hardware", "hardware"),
+                    ("Total cost", "total"), ("Value of compute", "value"), ("Indicative NPV", "npv")]
+            edf = pd.DataFrame({lab: [sol["cost"][k_][j] * mf for j in range(6)] for lab, k_ in keys}, index=YEARS).T
+            edf["PV (2028 $)"] = [pv[k_] for _, k_ in keys]
+            st.dataframe(edf.map(lambda v: fmt(v, 1)), use_container_width=True)
 
     # ----------------------------------------------------------------------------------------------- 8. detail
     st.markdown("## 8. Detailed plan")
