@@ -822,10 +822,9 @@ with tab_plan:
         dr["Vega chips used (M)"] = [x / 1e6 * mf for x in R["vega_used"]]; dr["AI-related boards (k)"] = [x / 1e3 * mf for x in R["boards_ai"]]
         dr["Mass to orbit (k tons)"] = [(R["mass_sso"][j] + R["mass_leo"][j]) / 1e3 * mf for j in range(6)]
         dr["Compute in orbit, end of year (GW)"] = R["fleet_compute"]
-        dr["Unconstrained: satellites"] = [x * mf for x in U["sats"]]; dr["Unconstrained: SSO flights"] = [x * mf for x in U["flights_sso"]]
-        dr["Unconstrained: LEO flights"] = [x * mf for x in U["flights_leo"]]; dr["Unconstrained: solar (GW)"] = [x * mf for x in U["solar"]]
-        dr["Unconstrained: Orion chips (M)"] = [x / 1e6 * mf for x in U["orion"]]
         ddf = pd.DataFrame(dr, index=YEARS).T
+        if not monthly:
+            ddf["2028-2033"] = ddf.sum(axis=1)
         st.dataframe(ddf.map(lambda v: fmt(v, 2)), use_container_width=True)
         st.download_button("Download CSV", ddf.to_csv().encode(), "plan.csv", key="dl8")
     st.markdown("<p class='muted'>Fictional case data. Model logic mirrors the Excel model; Solver = linear program (HiGHS) equivalent to the Excel Solver setup.</p>", unsafe_allow_html=True)
