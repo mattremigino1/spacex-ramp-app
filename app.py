@@ -615,7 +615,7 @@ with tab_plan:
     c = inp["costs"]
     recs = []
     opt_cum = sum(VAR["Constrained, optimized mix"]["realized"]); seed_cum = sum(VAR["Constrained, seed mix"]["realized"])
-    recs.append(("Run the optimized class and orbit mix", f"+{opt_cum - seed_cum:,.1f} GW 2028-33 vs. the seed mix, at no cost", "Now"))
+    recs.append(("Optimize class and orbit mix", f"+{opt_cum - seed_cum:,.1f} GW 2028-33 vs. the seed mix, at no cost", "Now"))
     fab = sol["cap_fab"]
     if max(fab) > 1e-6:
         y0 = YEARS[next(j for j in range(6) if fab[j] > 1e-6)]
