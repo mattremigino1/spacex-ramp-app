@@ -659,7 +659,6 @@ with tab_plan:
     cdf.loc["Unconstrained", "% of target"] = "100%"
     st.markdown("**Cases side by side**")
     st.dataframe(cdf.map(lambda v: fmt(v, 1) if isinstance(v, float) else v), use_container_width=True)
-    st.caption("Recommended plan = the selected settings plus the Solver's added launch capacity and solar fab, run through the model in whole satellites.")
 
     # ----------------------------------------------------------------------------------------------- 7. economics
     st.markdown("## 7. Costs and value of the recommended plan (illustrative)")
