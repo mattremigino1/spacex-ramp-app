@@ -37,13 +37,20 @@ header[data-testid="stHeader"] {
 div[data-testid="stToolbar"] {
   background: transparent !important;
 }
-/* Sidebar open/close control always sits on the left edge of the side panel */
+/* Streamlit ⋮ menu pinned to the left */
+#MainMenu {
+  position: fixed !important;
+  left: 0.35rem !important;
+  top: 0.4rem !important;
+  z-index: 100003 !important;
+}
+/* Sidebar open/close sits just right of the ⋮ menu */
 [data-testid="stExpandSidebarButton"],
 [data-testid="stSidebarCollapseButton"],
 header [data-testid="stBaseButton-headerNoPadding"],
 header button[kind="headerNoPadding"] {
   position: fixed !important;
-  left: 0.4rem !important;
+  left: 2.6rem !important;
   top: 0.55rem !important;
   z-index: 100002 !important;
 }
