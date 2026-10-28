@@ -259,7 +259,8 @@ tab_plan, tab_data = st.tabs(["Ramp", "Data and assumptions"])
 
 def year_table(label, rows, key):
     df = pd.DataFrame({r: vals for r, vals in rows.items()}, index=[str(y) for y in YEARS]).T
-    out = st.data_editor(df, key=k(key), use_container_width=True)
+    cols = {str(y): st.column_config.NumberColumn(str(y), format="localized") for y in YEARS}
+    out = st.data_editor(df, key=k(key), use_container_width=True, column_config=cols)
     return {r: [float(out.loc[r, str(y)]) for y in YEARS] for r in rows}
 
 
@@ -278,24 +279,32 @@ with tab_data:
     with st.expander("Satellite classes", expanded=True):
         cdf = pd.DataFrame(inp["classes"]).set_index("id")[["orbit", "gen", "kw", "kw_per_t", "solar_mult", "life"]]
         cdf.columns = ["Orbit", "Generation", "Compute (kW)", "kW per ton", "Solar multiplier", "Life (yrs)"]
-        ce = st.data_editor(cdf, key=k("cls"), disabled=["Orbit", "Generation"], use_container_width=True)
+        num = lambda lab: st.column_config.NumberColumn(lab, format="localized")
+        ce = st.data_editor(cdf, key=k("cls"), disabled=["Orbit", "Generation"], use_container_width=True,
+                            column_config={lab: num(lab) for lab in ("Compute (kW)", "kW per ton", "Solar multiplier", "Life (yrs)")})
         for c in inp["classes"]:
             c["kw"], c["kw_per_t"], c["solar_mult"], c["life"] = (float(ce.loc[c["id"], "Compute (kW)"]), float(ce.loc[c["id"], "kW per ton"]),
                                                                   float(ce.loc[c["id"], "Solar multiplier"]), int(ce.loc[c["id"], "Life (yrs)"]))
     with st.expander("Starship, chips, degradation", expanded=True):
         vdf = pd.DataFrame(inp["vehicles"]).set_index("name")[["leo", "sso"]]; vdf.columns = ["Payload to LEO (t)", "Payload to SSO (t)"]
-        ve = st.data_editor(vdf, key=k("veh"), use_container_width=True)
+        ve = st.data_editor(vdf, key=k("veh"), use_container_width=True,
+                            column_config={lab: st.column_config.NumberColumn(lab, format="localized")
+                                           for lab in ("Payload to LEO (t)", "Payload to SSO (t)")})
         for v in inp["vehicles"]:
             v["leo"], v["sso"] = float(ve.loc[v["name"], "Payload to LEO (t)"]), float(ve.loc[v["name"], "Payload to SSO (t)"])
         chdf = pd.DataFrame(inp["chips"]).set_index("name")[["tdp", "util", "first_year"]]; chdf.columns = ["TDP (W)", "Utilization", "First year"]
-        che = st.data_editor(chdf, key=k("chips"), use_container_width=True)
+        che = st.data_editor(chdf, key=k("chips"), use_container_width=True,
+                             column_config={lab: st.column_config.NumberColumn(lab, format="localized")
+                                            for lab in ("TDP (W)", "Utilization", "First year")})
         for c in inp["chips"]:
             c["tdp"], c["util"], c["first_year"] = float(che.loc[c["name"], "TDP (W)"]), float(che.loc[c["name"], "Utilization"]), int(che.loc[c["name"], "First year"])
         inp["solar_deg"] = st.number_input("Solar degradation per year", 0.0, 0.5, float(inp["solar_deg"]), 0.005, format="%.3f", key=k("sd"))
         inp["compute_deg"] = st.number_input("Compute degradation per year", 0.0, 0.5, float(inp["compute_deg"]), 0.005, format="%.3f", key=k("cd"))
     with st.expander("Circuit boards per satellite"):
         bdf = pd.DataFrame(inp["boards"]).set_index("name"); bdf.columns = ["Helios-A", "Helios-B", "AI-related"]
-        be = st.data_editor(bdf, key=k("boards"), use_container_width=True)
+        be = st.data_editor(bdf, key=k("boards"), use_container_width=True,
+                            column_config={"Helios-A": st.column_config.NumberColumn("Helios-A", format="localized"),
+                                           "Helios-B": st.column_config.NumberColumn("Helios-B", format="localized")})
         for b in inp["boards"]:
             b["a"], b["b"], b["ai"] = float(be.loc[b["name"], "Helios-A"]), float(be.loc[b["name"], "Helios-B"]), bool(be.loc[b["name"], "AI-related"])
     with st.expander("Costs and value"):
