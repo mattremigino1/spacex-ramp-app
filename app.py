@@ -182,7 +182,7 @@ with st.sidebar:
         t["aux_share"] = st.slider("Auxiliary load that scales with compute", 0.0, 1.0, float(t["aux_share"]), 0.05, key=k("aux"))
 
 # ----------------------------------------------------------------------------------------------- tabs: plan vs editable case data
-tab_plan, tab_data = st.tabs(["Plan", "Data and assumptions"])
+tab_plan, tab_data = st.tabs(["Ramp", "Data and assumptions"])
 
 
 def year_table(label, rows, key):
@@ -192,7 +192,7 @@ def year_table(label, rows, key):
 
 
 with tab_data:
-    st.caption("Case inputs and added cost assumptions. Edits update the Plan tab.")
+    st.caption("Case inputs and added cost assumptions. Edits update the Ramp tab.")
     with st.expander("Target, flights, solar, chips", expanded=True):
         e = year_table("", {"Compute target (GW)": inp["target"], "SSO flights": inp["flights_sso"], "LEO flights": inp["flights_leo"],
                             "Solar (GW/yr)": inp["solar"], "Orion chips": inp["orion"], "Vega chips": inp["vega"]}, "case")
