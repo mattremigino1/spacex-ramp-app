@@ -193,15 +193,19 @@ with st.sidebar:
     t["mix"] = "Optimized" if _mix == "Flexible/optimized" else "Custom"
     tag("S-optimizer")
     t["apply_solver"] = int(st.toggle("Run optimizer", value=t.get("apply_solver", 0) == 1, key=k("apply"),
-                                      help="Adds launch and solar capacity to unlock compute and maximize economic value"))
-    tag("S-more-toggles")
-    with st.expander("More toggles"):
-        t["eol_sizing"] = int(st.toggle("Size solar for end of life", value=t["eol_sizing"] == 1, key=k("eol")))
-        t["chip_carry"] = int(st.toggle("Carry unused chips forward", value=t["chip_carry"] == 1, key=k("cc")))
-        t["solar_carry"] = int(st.toggle("Carry unused solar forward", value=t["solar_carry"] == 1, key=k("sc")))
-        t["heliosb_year"] = int(st.selectbox("First year Helios-B can launch", list(range(2028, 2035)), index=list(range(2028, 2035)).index(t["heliosb_year"]), key=k("hb")))
-        inp["vehicles"][1]["year"] = int(st.selectbox("First year of Starship V4", list(range(2028, 2035)), index=list(range(2028, 2035)).index(inp["vehicles"][1]["year"]), key=k("v4")))
-        t["aux_share"] = st.slider("Auxiliary load that scales with compute", 0.0, 1.0, float(t["aux_share"]), 0.05, key=k("aux"))
+                                      help="Adds optimal levels of launch and solar capacity to unlock compute and maximize economic value"))
+    tag("S-eol")
+    t["eol_sizing"] = int(st.toggle("Size solar for end of life", value=t["eol_sizing"] == 1, key=k("eol")))
+    tag("S-chip-carry")
+    t["chip_carry"] = int(st.toggle("Carry unused chips forward", value=t["chip_carry"] == 1, key=k("cc")))
+    tag("S-solar-carry")
+    t["solar_carry"] = int(st.toggle("Carry unused solar forward", value=t["solar_carry"] == 1, key=k("sc")))
+    tag("S-heliosb")
+    t["heliosb_year"] = int(st.selectbox("First year Helios-B can launch", list(range(2028, 2035)), index=list(range(2028, 2035)).index(t["heliosb_year"]), key=k("hb")))
+    tag("S-v4")
+    inp["vehicles"][1]["year"] = int(st.selectbox("First year of Starship V4", list(range(2028, 2035)), index=list(range(2028, 2035)).index(inp["vehicles"][1]["year"]), key=k("v4")))
+    tag("S-aux")
+    t["aux_share"] = st.slider("Auxiliary load that scales with compute", 0.0, 1.0, float(t["aux_share"]), 0.05, key=k("aux"))
 
 # ----------------------------------------------------------------------------------------------- tabs: plan vs editable case data
 tab_plan, tab_data = st.tabs(["Ramp", "Data and assumptions"])
