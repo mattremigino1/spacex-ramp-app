@@ -311,13 +311,11 @@ def case_name():
         ref, cur = norm(scenarios.apply(preset, DEFAULTS)), norm(inp)
         if preset == "Unconstrained":   # with every limit off, the mix toggle doesn't count as an edit
             ref["toggles"].pop("mix", None); cur["toggles"].pop("mix", None)
-        opt_on = cur["toggles"].get("apply_solver", 0) == 1 and ref["toggles"].get("apply_solver", 0) != 1
-        ref["toggles"].pop("apply_solver", None); cur["toggles"].pop("apply_solver", None)
+        ref["toggles"].pop("apply_solver", None); cur["toggles"].pop("apply_solver", None)   # Run optimizer isn't an edit
         same = ref == cur
     except Exception:
-        same, opt_on = True, False
-    name = preset + (" + optimizer" if opt_on else "")
-    return name if same else f"{name} (edited)"
+        same = True
+    return preset if same else f"{preset} (edited)"
 
 
 with tab_plan:
