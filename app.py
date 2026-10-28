@@ -193,7 +193,7 @@ with st.sidebar:
     t["mix"] = "Optimized" if _mix == "Flexible/optimized" else "Custom"
     tag("S-optimizer")
     t["apply_solver"] = int(st.toggle("Run optimizer", value=t.get("apply_solver", 0) == 1, key=k("apply"),
-                                      help="Adds the launch capacity and solar fab the Solver recommends, then runs the plan in whole satellites."))
+                                      help="Adds launch and solar capacity to unlock compute and maximize economic value"))
     tag("S-more-toggles")
     with st.expander("More toggles"):
         t["eol_sizing"] = int(st.toggle("Size solar for end of life", value=t["eol_sizing"] == 1, key=k("eol")))
