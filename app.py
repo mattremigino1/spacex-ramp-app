@@ -114,7 +114,7 @@ with st.sidebar:
     t["chips_on"] = int(st.toggle("AI chip limit", value=t["chips_on"] == 1, key=k("con")))
     t["mix"] = st.radio("Class and orbit mix", ["Optimized", "Custom"], index=0 if t["mix"] == "Optimized" else 1, horizontal=True, key=k("mix"),
                         help="Optimized picks the split that maximizes compute under the active limits; Custom uses the seed mix on the Data and assumptions tab.")
-    t["apply_solver"] = int(st.toggle("Apply the recommended additions (Solver)", value=t.get("apply_solver", 0) == 1, key=k("apply"),
+    t["apply_solver"] = int(st.toggle("Run optimizer", value=t.get("apply_solver", 0) == 1, key=k("apply"),
                                       help="Adds the launch capacity and solar fab the Solver recommends, then runs the plan in whole satellites."))
     with st.expander("More toggles"):
         t["eol_sizing"] = int(st.toggle("Size solar for end of life", value=t["eol_sizing"] == 1, key=k("eol")))
