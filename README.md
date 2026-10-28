@@ -27,7 +27,7 @@ Opens at http://localhost:8501. No internet needed once the packages are install
 | Annual resource gaps | Stacked bars by year: resource available in the selected scenario (gray) plus the gap to the optimized plan (blue), with 2028-33 totals |
 | Annual bottlenecks | Share of the next unit of compute each limit would unlock |
 | Annual satellites launched by class | Number or compute, annual or cumulative |
-| Annual gigawatts of compute constrained by resource | Gap split into mix, flights alone, solar alone, flights + solar together, chips, with 2028-33 totals per resource |
+| Annual gigawatts of compute constrained by resource | Gap split into mix, flights only, solar only, needs both flights and solar, chips, with 2028-33 totals per resource |
 | Recommended plan | Optimizer actions ranked by value at stake, plus a scenario comparison |
 | Scenario economics | Value, cost, NPV, and how much the recommended plan adds (costs are added assumptions) |
 | Detailed plan | Year-by-year table with CSV download |

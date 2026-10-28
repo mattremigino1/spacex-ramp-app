@@ -717,7 +717,7 @@ with tab_plan:
     # ----------------------------------------------------------------------------------------------- 5. closing the gap
     st.markdown("## Annual gigawatts of compute constrained by resource")
     gp = R["gap_parts"]
-    parts = [("Orbit and satellite mix", "mix", G2), ("Flights alone", "flights", WHITE), ("Solar alone", "solar", G1), ("Flights and solar together", "together", ACC), ("Chips", "chips", ACC2)]
+    parts = [("Orbit and satellite mix", "mix", G2), ("Flights only", "flights", WHITE), ("Solar only", "solar", G1), ("Needs both flights and solar", "together", ACC), ("Chips", "chips", ACC2)]
     gc1, gc2 = st.columns([5.5, 1])
     with gc2:
         tag("6-controls")
@@ -783,11 +783,15 @@ with tab_plan:
     st.markdown("<span class='muted'>Optimization maximizes economic value by determining how much launch and solar capacity needs to be added given targets and orbital + satellite mix requirements.</span>", unsafe_allow_html=True)
     c = inp["costs"]
 
-    def _worth_line(worth_B, gw_lost):
+    def _worth_line(worth_B, gw_lost, alone_gw=None):
         base = f"Worth ${worth_B:,.0f}B NPV"
         if gw_lost > 0.05:
-            return base + f"; without it the plan delivers {gw_lost:,.1f} GW less"
-        return base + "; without it the target is still met, but at higher cost"
+            base += f"; without it the plan delivers {gw_lost:,.1f} GW less"
+        else:
+            base += "; without it the target is still met, but at higher cost"
+        if alone_gw is not None and alone_gw > 0.05:
+            base += f", and alone, this could unlock {alone_gw:,.1f} GW"
+        return base
 
     def _flight_steps(cap):
         j0 = next(j for j in range(6) if cap[j] > 1e-6)
@@ -836,7 +840,8 @@ with tab_plan:
         av = action_vals["fab"]
         detail = (f"{fab[next(j for j in range(6) if fab[j] > 1e-6)]:,.1f} GW/yr usable in {y0}, "
                   f"growing to {fab[-1]:,.1f} GW/yr by {YEARS[-1]}; ${sol['pv']['new_fab']:,.0f}B capex (PV)")
-        action_cards.append((av["worth_B"], "Commit a solar fab", _worth_line(av["worth_B"], av["gw_lost"]),
+        solar_alone_gw = sum(max(0, x) for x in R["gap_parts"]["solar"])   # relieving solar in isolation (constrained-compute chart)
+        action_cards.append((av["worth_B"], "Commit a solar fab", _worth_line(av["worth_B"], av["gw_lost"], solar_alone_gw),
                              detail, f"Decide {y0 - c['fab_lead']}"))
 
     for orb, key, cap_key, new_key, orbit_capex in (
