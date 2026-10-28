@@ -496,7 +496,9 @@ with tab_plan:
         vals = [lev[j][i] * 100 for j in range(6)]
         fig.add_bar(x=YEARS, y=vals, name=l, marker_color=lc[i], text=[f"{v:.0f}%" if v >= 4 else "" for v in vals], textposition="inside", insidetextfont=dict(color="#000000" if lc[i] in (WHITE, G1) else WHITE))
     fig.update_layout(barmode="stack", yaxis=dict(range=[0, 100], ticksuffix="%"))
-    st.plotly_chart(style_fig(fig, 320), use_container_width=True)
+    style_fig(fig, 360)
+    fig.update_layout(margin=dict(l=10, r=10, t=70, b=10), legend=dict(orientation="h", y=1.18, x=0, bgcolor="rgba(0,0,0,0)"))
+    st.plotly_chart(fig, use_container_width=True)
     st.caption("Share of the next unit of compute each limit would unlock (marginal view, optimized mix). A year at 0% everywhere has met its target.")
 
     # ----------------------------------------------------------------------------------------------- 4. satellites
