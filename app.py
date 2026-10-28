@@ -85,8 +85,26 @@ div.st-key-preset_box input {
   width: auto !important;
   min-width: 14rem !important; /* fits the longest preset label */
 }
+.uitag { display:inline-block; background:#FFD400; color:#000; font:700 11px/1.4 Menlo, monospace; padding:0 6px; border-radius:4px; margin:2px 0; letter-spacing:0; text-transform:none; }
 </style>
 """, unsafe_allow_html=True)
+
+
+# ----------------------------------------------------------------------------------------------- label overlay (for review only)
+# Add ?labels=1 to the app's address to tag every element (e.g. "3-chart") so edits can point at it. Off by default.
+try:
+    LABELS = str(st.query_params.get("labels", "")).strip() == "1"
+except Exception:
+    LABELS = False
+
+
+def tag_html(t):
+    return f"<span class='uitag'>{t}</span> " if LABELS else ""
+
+
+def tag(t):
+    if LABELS:
+        st.markdown(tag_html(t), unsafe_allow_html=True)
 
 
 def style_fig(fig, h=380, legend=True):
@@ -154,20 +172,29 @@ with st.sidebar:
     names = list(scenarios.PRESETS)
     if st.session_state.preset not in names:
         st.session_state.preset = names[0]
+    tag("S-preset")
     st.selectbox("Preset", names, index=names.index(st.session_state.preset), key="preset_box", on_change=set_preset, label_visibility="collapsed")
+    tag("S-reset")
     st.button("Reset to case data", on_click=reset, use_container_width=True)
+    tag("S-monthly")
     monthly = st.toggle("Show flows per month", value=False, help="Monthly = average monthly pace (each year split evenly). Cumulative views are switched off.")
 
     st.markdown("### Toggles")
     t = inp["toggles"]
+    tag("S-flight-limit")
     t["launch_on"] = int(st.toggle("Starship flight limit", value=t["launch_on"] == 1, key=k("lon")))
+    tag("S-solar-limit")
     t["solar_on"] = int(st.toggle("Solar limit", value=t["solar_on"] == 1, key=k("son")))
+    tag("S-chip-limit")
     t["chips_on"] = int(st.toggle("AI chip limit", value=t["chips_on"] == 1, key=k("con")))
+    tag("S-mix")
     _mix = st.radio("Class and orbit mix", ["Optimized", "Fixed"], index=0 if t["mix"] == "Optimized" else 1, horizontal=True, key=k("mix"),
                     help="Optimized lets the model and the optimizer pick the class split that maximizes compute or minimizes cost. Fixed holds each year's split at the seed mix table (editable on the Data and assumptions tab), for both the selected case and the optimizer's plan.")
     t["mix"] = "Optimized" if _mix == "Optimized" else "Custom"
+    tag("S-optimizer")
     t["apply_solver"] = int(st.toggle("Run optimizer", value=t.get("apply_solver", 0) == 1, key=k("apply"),
                                       help="Adds the launch capacity and solar fab the Solver recommends, then runs the plan in whole satellites."))
+    tag("S-more-toggles")
     with st.expander("More toggles"):
         t["eol_sizing"] = int(st.toggle("Size solar for end of life", value=t["eol_sizing"] == 1, key=k("eol")))
         t["chip_carry"] = int(st.toggle("Carry unused chips forward", value=t["chip_carry"] == 1, key=k("cc")))
@@ -189,16 +216,19 @@ def year_table(label, rows, key):
 
 with tab_data:
     st.caption("Case inputs and added cost assumptions. Edits update the Ramp tab.")
+    tag("D1-case-inputs")
     with st.expander("Target, flights, solar, chips", expanded=True):
         e = year_table("", {"Compute target (GW)": inp["target"], "SSO flights": inp["flights_sso"], "LEO flights": inp["flights_leo"],
                             "Solar (GW/yr)": inp["solar"], "Orion chips": inp["orion"], "Vega chips": inp["vega"]}, "case")
         inp["target"], inp["flights_sso"], inp["flights_leo"] = e["Compute target (GW)"], e["SSO flights"], e["LEO flights"]
         inp["solar"], inp["orion"], inp["vega"] = e["Solar (GW/yr)"], e["Orion chips"], e["Vega chips"]
+    tag("D2-seed-mix")
     with st.expander("Seed (custom) mix, share of compute", expanded=True):
         e = year_table("", inp["custom_mix"], "mix_tbl")
         inp["custom_mix"] = e
         bad = [y for j, y in enumerate(YEARS) if abs(sum(e[c][j] for c in e) - 1) > 1e-6]
         if bad: st.warning("Mix does not sum to 100% in " + ", ".join(map(str, bad)))
+    tag("D3-classes")
     with st.expander("Satellite classes", expanded=True):
         cdf = pd.DataFrame(inp["classes"]).set_index("id")[["orbit", "gen", "kw", "kw_per_t", "solar_mult", "life"]]
         cdf.columns = ["Orbit", "Generation", "Compute (kW)", "kW per ton", "Solar multiplier", "Life (yrs)"]
@@ -208,6 +238,7 @@ with tab_data:
         for c in inp["classes"]:
             c["kw"], c["kw_per_t"], c["solar_mult"], c["life"] = (float(ce.loc[c["id"], "Compute (kW)"]), float(ce.loc[c["id"], "kW per ton"]),
                                                                   float(ce.loc[c["id"], "Solar multiplier"]), int(ce.loc[c["id"], "Life (yrs)"]))
+    tag("D4-starship-chips")
     with st.expander("Starship, chips, degradation", expanded=True):
         vdf = pd.DataFrame(inp["vehicles"]).set_index("name")[["leo", "sso"]]; vdf.columns = ["Payload to LEO (t)", "Payload to SSO (t)"]
         ve = st.data_editor(vdf, key=k("veh"), use_container_width=True,
@@ -223,6 +254,7 @@ with tab_data:
             c["tdp"], c["util"], c["first_year"] = float(che.loc[c["name"], "TDP (W)"]), float(che.loc[c["name"], "Utilization"]), int(che.loc[c["name"], "First year"])
         inp["solar_deg"] = st.number_input("Solar degradation per year", 0.0, 0.5, float(inp["solar_deg"]), 0.005, format="%.3f", key=k("sd"))
         inp["compute_deg"] = st.number_input("Compute degradation per year", 0.0, 0.5, float(inp["compute_deg"]), 0.005, format="%.3f", key=k("cd"))
+    tag("D5-boards")
     with st.expander("Circuit boards per satellite"):
         bdf = pd.DataFrame(inp["boards"]).set_index("name"); bdf.columns = ["Helios-A", "Helios-B", "AI-related"]
         be = st.data_editor(bdf, key=k("boards"), use_container_width=True,
@@ -230,6 +262,7 @@ with tab_data:
                                            "Helios-B": st.column_config.NumberColumn("Helios-B", format="localized")})
         for b in inp["boards"]:
             b["a"], b["b"], b["ai"] = float(be.loc[b["name"], "Helios-A"]), float(be.loc[b["name"], "Helios-B"]), bool(be.loc[b["name"], "AI-related"])
+    tag("D6-costs")
     with st.expander("Costs and value"):
         c = inp["costs"]
         fields = [("launch_capex", "New launch capacity, $M per extra flight/yr", 1.0), ("ops", "Operating cost per flight, $M", 1.0),
@@ -320,6 +353,7 @@ def case_name():
 
 with tab_plan:
     # ----------------------------------------------------------------------------------------------- header + answer
+    tag("H-title")
     st.markdown("# AI Satellite Launch Ramp")
     binds = R["binds"]
     first_short = next((y for y, tm in zip(YEARS, R["target_met"]) if tm == 0), None)
@@ -337,11 +371,13 @@ with tab_plan:
         return "; ".join(f"{p[0]} {p[1]}" + (f"-{str(p[2])[2:]}" if p[2] != p[1] else "") for p in parts)
 
 
+    tag("H-answer")
     st.markdown(f"<div class='answer'><b>{case_name()}:</b> delivers <b>{cum_r:,.1f} GW</b> of the {cum_t:,.1f} GW 2028-33 target "
                 f"(<b>{cum_r / cum_t:.0%}</b>).<br>What binds: {binds_story()}.<br>"
                 f"<span class='muted'>The recommended plan (most economic added launch capacity and solar fab) reaches {sum(sol['compute']):,.1f} GW "
                 f"({sum(sol['compute']) / cum_t:.0%}); see the recommendation section.</span></div>", unsafe_allow_html=True)
 
+    tag("H-tiles")
     m = st.columns(5)
     if monthly:
         m[0].metric("Target, avg / month", f"{cum_t / 72:,.2f} GW"); m[1].metric("Delivered, avg / month", f"{cum_r / 72:,.2f} GW")
@@ -357,6 +393,7 @@ with tab_plan:
     st.markdown("## 1. Compute launched vs. target")
     c1, c2 = st.columns([5.5, 1])
     with c2:
+        tag("1-controls")
         split = st.radio("Break out by", ["Total", "Orbit", "Generation", "Class and orbit"], key="split")
         cum = st.toggle("Cumulative", value=False, disabled=monthly, key="cum")
         cum = cum and not monthly
@@ -375,7 +412,9 @@ with tab_plan:
         tv = acc([x * mf for x in T])
         fig.add_scatter(x=YEARS, y=tv, name="Target", mode="lines+markers+text", line=dict(color=G2, dash="dash", width=2), text=[fmt(v, 2 if monthly else 1) for v in tv], textposition="top center", textfont=dict(color=G1))
         fig.update_layout(barmode="stack", yaxis_title=("Cumulative GW" if cum else unit_gw))
+        tag("1-chart")
         st.plotly_chart(style_fig(fig, 400), use_container_width=True)
+    tag("1-table")
     with st.expander("Show the numbers"):
         rows = {"Target": [x * mf for x in T]}
         for gname, idx in groups.items(): rows[gname] = [sum(R["comp_cls"][j][i] for i in idx) * mf for j in range(6)]
@@ -390,6 +429,7 @@ with tab_plan:
 
     # ----------------------------------------------------------------------------------------------- 2. what binds
     st.markdown("## 2. Utilization of each constraint")
+    tag("2-tabs")
     tab_binds_today, tab_plan_needs = st.tabs(["What binds today", "What is needed"])
 
     with tab_binds_today:
@@ -415,10 +455,13 @@ with tab_plan:
                 if isb[i][j]:
                     fig.add_shape(type="rect", x0=j - 0.5, x1=j + 0.5, y0=i - 0.5, y1=i + 0.5, line=dict(color=WHITE, width=3))
         fig.update_yaxes(autorange="reversed", showgrid=False)
+        tag("2a-heatmap")
         st.plotly_chart(style_fig(fig, 300, legend=False), use_container_width=True)
         st.caption("Selected case: share of each resource used. White outline = the limit holding compute back that year.")
+        tag("2a-table")
         with st.expander("Show the numbers"):
             st.dataframe(pd.DataFrame(txt, index=rowsn, columns=YEARS), use_container_width=True)
+        tag("2a-drill")
         pick = st.segmented_control("Drill into a limit", rowsn, key="drill_today")
         if pick:
             unit = {"SSO flights": "flights", "LEO flights": "flights", "Solar": "GW", "Orion chips": "chips", "Vega chips": "chips"}[pick]
@@ -480,8 +523,10 @@ with tab_plan:
                 if outline2[i][j]:
                     fig2.add_shape(type="rect", x0=j - 0.5, x1=j + 0.5, y0=i - 0.5, y1=i + 0.5, line=dict(color=WHITE, width=3))
         fig2.update_yaxes(autorange="reversed", showgrid=False)
+        tag("2b-heatmap")
         st.plotly_chart(style_fig(fig2, 300, legend=False), use_container_width=True)
         st.caption("Amount of current planned resource required to achieve optimal plan. White outline = limit holding compute back.")
+        tag("2b-table")
         with st.expander("Show the numbers"):
             st.dataframe(pd.DataFrame(txt2, index=row_labels, columns=YEARS), use_container_width=True)
 
@@ -506,8 +551,10 @@ with tab_plan:
             else:
                 chip_span = ", ".join(str(y) for y in cy)
             story += f" Chips cap the plan in {chip_span}."
+        tag("2b-readout")
         st.markdown(f"<p class='answer'>{story}</p>", unsafe_allow_html=True)
 
+        tag("2b-drill")
         pick2 = st.segmented_control("Drill into a limit", row_labels, key="drill_plan")
         if pick2:
             rkey = row_keys[row_labels.index(pick2)]
@@ -542,6 +589,7 @@ with tab_plan:
     }
     uc1, uc2 = st.columns([5.5, 1])
     with uc2:
+        tag("3-controls")
         res_pick = st.radio("Resource", list(res_opts), key="res_pick")
     unit_r, getter, scale = res_opts[res_pick]
     sel_v = [getter(R)[j] * scale * mf for j in range(6)]
@@ -557,8 +605,10 @@ with tab_plan:
                           yaxis_title=f"{unit_r} / {'month' if monthly else 'year'}")
         fig = style_fig(fig, 380)
         fig.update_layout(uniformtext_mode=False)
+        tag("3-chart")
         st.plotly_chart(fig, use_container_width=True)
     st.caption("Units of the chosen resource used each year by the selected case and by the optimized case (the selected settings plus the optimizer's added launch capacity and solar fab, run in whole satellites).")
+    tag("3-table")
     with st.expander("Show the numbers"):
         udf = pd.DataFrame({"Selected case": sel_v, "Optimized (constrained)": opt_v,
                             "Additional needed (optimized − selected)": [o - s_ for o, s_ in zip(opt_v, sel_v)]}, index=YEARS).T
@@ -576,11 +626,13 @@ with tab_plan:
         vals = [lev[j][i] * 100 for j in range(6)]
         fig.add_bar(x=YEARS, y=vals, name=l, marker_color=lc[i], text=[f"{v:.0f}%" if v >= 4 else "" for v in vals], textposition="inside", insidetextfont=dict(color="#000000" if lc[i] in (WHITE, G1) else WHITE))
     fig.update_layout(barmode="stack", yaxis=dict(range=[0, 100], ticksuffix="%"))
+    tag("4-chart")
     st.plotly_chart(style_fig(fig, 360), use_container_width=True)
     if inp["toggles"]["mix"] == "Optimized":
         st.caption("Share of the next unit of compute each limit would unlock (marginal view). A year at 0% everywhere has met its target.")
     else:
         st.caption("Fixed mix: compute is set by the tightest limit, so it gets 100% (split equally if tied); relieving any other limit adds nothing. A year at 0% everywhere has met its target.")
+    tag("4-table")
     with st.expander("Show the numbers"):
         ldf = pd.DataFrame({l: [f"{lev[j][i]:.0%}" for j in range(6)] for i, l in enumerate(labels)}, index=YEARS).T
         ldf.loc["What binds"] = R["binds"]
@@ -590,6 +642,7 @@ with tab_plan:
     st.markdown("## 5. Satellites launched by class")
     cc1, cc2 = st.columns([5.5, 1])
     with cc2:
+        tag("5-controls")
         measure = st.radio("Measure", ["Number of satellites", "Compute (GW)"], key="satm")
         cum4 = st.toggle("Cumulative", value=False, disabled=monthly, key="cum4") and not monthly
     with cc1:
@@ -601,7 +654,9 @@ with tab_plan:
                         text=[(f"{v:,.0f}" if measure.startswith("Number") else f"{v:,.1f}") if v > 0 else "" for v in vals], textposition="inside",
                         insidetextfont=dict(color="#000000" if CLASS_COL[cls[i]["id"]] in (WHITE, G1, ACC2) else WHITE))
         fig.update_layout(barmode="stack")
+        tag("5-chart")
         st.plotly_chart(style_fig(fig, 360), use_container_width=True)
+    tag("5-table")
     with st.expander("Show the numbers"):
         sdf = pd.DataFrame({cls[i]["id"]: ([sum((R["sats"][jj][i] if measure.startswith("Number") else R["comp_cls"][jj][i]) for jj in range(j + 1)) for j in range(6)] if cum4
                                             else [(R["sats"][j][i] if measure.startswith("Number") else R["comp_cls"][j][i]) * mf for j in range(6)]) for i in range(4)}, index=YEARS).T
@@ -616,6 +671,7 @@ with tab_plan:
     parts = [("Orbit and satellite mix", "mix", G2), ("Flights alone", "flights", WHITE), ("Solar alone", "solar", G1), ("Flights and solar together", "together", ACC), ("Chips", "chips", G3)]
     gc1, gc2 = st.columns([5.5, 1])
     with gc2:
+        tag("6-controls")
         gap_mode = st.radio("Show", ["GW", "% of target"], key="gaprel")
     rel_gap = gap_mode.startswith("%")
     with gc1:
@@ -637,7 +693,9 @@ with tab_plan:
         fig = style_fig(fig, 400)
         if rel_gap:
             fig.update_yaxes(range=[0, 100], ticksuffix="%")
+        tag("6-chart")
         st.plotly_chart(fig, use_container_width=True)
+    tag("6-table")
     with st.expander("Show the numbers"):
         if rel_gap:
             gdf = pd.DataFrame({lab: [max(0, gp[key_][j]) / T[j] * 100 if T[j] else 0 for j in range(6)] for lab, key_, _ in parts}, index=YEARS).T
@@ -739,7 +797,7 @@ with tab_plan:
 
     for i, (worth_B, title, worth_line, detail, pill) in enumerate(action_cards, 1):
         body = worth_line if not detail else f"{worth_line}<br>{detail}"
-        st.markdown(f"<div class='rec'><span class='pill'>{i}</span><b>{title}</b><br>"
+        st.markdown(f"<div class='rec'>{tag_html(f'7-card-{i}')}<span class='pill'>{i}</span><b>{title}</b><br>"
                     f"<span class='muted'>{body}</span></div>", unsafe_allow_html=True)
 
     # Remaining-gap card last (not ranked with actions)
@@ -760,7 +818,7 @@ with tab_plan:
         else:
             title = "Remaining gap"
         n = len(action_cards) + 1
-        st.markdown(f"<div class='rec'><span class='pill'>{n}</span><b>{title}</b><br>"
+        st.markdown(f"<div class='rec'>{tag_html('7-gap-card')}<span class='pill'>{n}</span><b>{title}</b><br>"
                     f"<span class='muted'>{' '.join(parts)}</span></div>", unsafe_allow_html=True)
 
     st.caption("Ranked by value at stake: the NPV lost if that action is dropped and the optimizer re-plans without it. Illustrative economics.")
@@ -773,18 +831,21 @@ with tab_plan:
     cdf = pd.DataFrame(comp_rows).T
     cdf.loc["Unconstrained", "% of target"] = "100%"
     st.markdown("**Scenario comparison**")
+    tag("7-table")
     st.dataframe(cdf.map(fmt_cell), use_container_width=True)
 
     # ----------------------------------------------------------------------------------------------- 7. economics
     st.markdown("## 8. Economics of the selected case")
     econ = selected_case_economics(inp, R, sol)
     if not econ["meaningful"]:
+        tag("8-note")
         st.info("Economics not shown: with a limit switched off, that resource is treated as unlimited and free, so costs and NPV are not meaningful. Turn the limits back on to see the economics.")
     else:
         pv = econ["pv"]
         y = econ["yearly"]
         plan_npv = sol["pv"]["npv"]
         plan_adds = plan_npv - pv["npv"]
+        tag("8-tiles")
         e = st.columns(4)
         e[0].metric("Value of compute (PV)", f"${pv['value']:,.0f}B", delta_color="off", delta_arrow="off")
         e[1].metric("Total cost (PV)", f"${pv['total']:,.0f}B", delta_color="off", delta_arrow="off")
@@ -796,6 +857,7 @@ with tab_plan:
         else:
             e[3].metric("NPV the recommended plan adds", f"${plan_adds:,.0f}B",
                         f"Plan NPV ${plan_npv:,.0f}B", delta_color="off", delta_arrow="off")
+        tag("8-table")
         with st.expander("Show the numbers"):
             rows = [
                 ("Capex: new capacity added by the Solver (only when the additions are applied)", "new_capex"),
@@ -816,6 +878,7 @@ with tab_plan:
 
     # ----------------------------------------------------------------------------------------------- 8. detail
     st.markdown("## 9. Detailed plan")
+    tag("9-table")
     with st.expander("Selected scenario by year", expanded=False):
         dr = {}
         dr["Compute launched (GW)"] = [x * mf for x in real]
