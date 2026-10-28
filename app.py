@@ -535,22 +535,50 @@ with tab_plan:
     st.markdown("## 5. What closing the gap takes")
     gp = R["gap_parts"]
     parts = [("Mix: custom vs. optimized", "mix", G2), ("Flights alone", "flights", WHITE), ("Solar alone", "solar", G1), ("Flights and solar together", "together", ACC), ("Needs more chips", "chips", G3)]
-    fig = go.Figure()
-    fig.add_bar(x=YEARS, y=[r_ * mf for r_ in real], name="Delivered", marker_color="#1F1F1F", text=[fmt(v * mf, 1) for v in real], textposition="inside")
-    for lab, key_, col in parts:
-        vals = [max(0, gp[key_][j]) * mf for j in range(6)]
-        if sum(vals) > 1e-6:
-            fig.add_bar(x=YEARS, y=vals, name=lab, marker_color=col, text=[fmt(v, 1) if v > 0.05 * max(T) * mf else "" for v in vals], textposition="inside",
-                        insidetextfont=dict(color="#000000" if col in (WHITE, G1) else WHITE))
-    fig.add_scatter(x=YEARS, y=[x * mf for x in T], name="Target", mode="markers", marker=dict(symbol="line-ew", size=40, line=dict(width=3, color=G2)))
-    fig.update_layout(barmode="stack", yaxis_title=unit_gw)
-    st.plotly_chart(style_fig(fig, 380), use_container_width=True)
+    gc1, gc2 = st.columns([3, 1])
+    with gc2:
+        gap_mode = st.radio("Show", ["GW", "% of target"], key="gaprel")
+    rel_gap = gap_mode.startswith("%")
+    with gc1:
+        fig = go.Figure()
+        if rel_gap:
+            deliv = [real[j] / T[j] * 100 if T[j] else 0 for j in range(6)]
+            fig.add_bar(x=YEARS, y=deliv, name="Delivered", marker_color="#1F1F1F",
+                        text=[f"{v:.0f}%" if v > 3 else "" for v in deliv], textposition="inside")
+        else:
+            deliv = [r_ * mf for r_ in real]
+            fig.add_bar(x=YEARS, y=deliv, name="Delivered", marker_color="#1F1F1F",
+                        text=[fmt(v, 1) for v in deliv], textposition="inside")
+        for lab, key_, col in parts:
+            if rel_gap:
+                vals = [max(0, gp[key_][j]) / T[j] * 100 if T[j] else 0 for j in range(6)]
+                texts = [f"{v:.0f}%" if v > 3 else "" for v in vals]
+            else:
+                vals = [max(0, gp[key_][j]) * mf for j in range(6)]
+                texts = [fmt(v, 1) if v > 0.05 * max(T) * mf else "" for v in vals]
+            if sum(vals) > 1e-6:
+                fig.add_bar(x=YEARS, y=vals, name=lab, marker_color=col, text=texts, textposition="inside",
+                            insidetextfont=dict(color="#000000" if col in (WHITE, G1) else WHITE))
+        if not rel_gap:
+            fig.add_scatter(x=YEARS, y=[x * mf for x in T], name="Target", mode="markers",
+                            marker=dict(symbol="line-ew", size=40, line=dict(width=3, color=G2)))
+        fig.update_layout(barmode="stack", yaxis_title=("% of target" if rel_gap else unit_gw))
+        fig = style_fig(fig, 380)
+        if rel_gap:
+            fig.update_yaxes(range=[0, 100], ticksuffix="%")
+        st.plotly_chart(fig, use_container_width=True)
     st.caption("Each single-limit bar is the model with only that limit removed; what neither closes alone needs flights and solar lifted together.")
     with st.expander("Show the numbers"):
-        gdf = pd.DataFrame({lab: [gp[key_][j] * mf for j in range(6)] for lab, key_, _ in parts}, index=YEARS).T
-        gdf.loc["Gap to target"] = [gp["gap"][j] * mf for j in range(6)]
-        if not monthly: gdf["2028-33"] = gdf.sum(axis=1)
-        st.dataframe(gdf.map(lambda v: fmt(v, 2)), use_container_width=True)
+        if rel_gap:
+            gdf = pd.DataFrame({lab: [max(0, gp[key_][j]) / T[j] * 100 if T[j] else 0 for j in range(6)] for lab, key_, _ in parts}, index=YEARS).T
+            gdf.loc["Delivered"] = [real[j] / T[j] * 100 if T[j] else 0 for j in range(6)]
+            gdf.loc["Gap to target"] = [gp["gap"][j] / T[j] * 100 if T[j] else 0 for j in range(6)]
+            st.dataframe(gdf.map(lambda v: f"{v:.1f}%"), use_container_width=True)
+        else:
+            gdf = pd.DataFrame({lab: [gp[key_][j] * mf for j in range(6)] for lab, key_, _ in parts}, index=YEARS).T
+            gdf.loc["Gap to target"] = [gp["gap"][j] * mf for j in range(6)]
+            if not monthly: gdf["2028-33"] = gdf.sum(axis=1)
+            st.dataframe(gdf.map(lambda v: fmt(v, 2)), use_container_width=True)
 
     # ----------------------------------------------------------------------------------------------- 6. recommendation
     st.markdown("## 6. Recommended plan and case comparison")
