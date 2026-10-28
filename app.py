@@ -481,7 +481,7 @@ with tab_plan:
                 uses = [w / 1e9 for w in plan_chip_w]
                 unit = "effective GW"
             dd2 = pd.DataFrame({
-                "Case supply": [supply[j] * f for j in range(6)],
+                "Base supply": [supply[j] * f for j in range(6)],
                 "Recommended plan uses": [uses[j] * f for j in range(6)],
                 "To add (plan − case, floor 0)": [max(0, uses[j] - supply[j]) * f for j in range(6)],
             }, index=YEARS).T
