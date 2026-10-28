@@ -499,7 +499,10 @@ with tab_plan:
     style_fig(fig, 360)
     fig.update_layout(margin=dict(l=10, r=10, t=70, b=10), legend=dict(orientation="h", y=1.18, x=0, bgcolor="rgba(0,0,0,0)"))
     st.plotly_chart(fig, use_container_width=True)
-    st.caption("Share of the next unit of compute each limit would unlock (optimized mix). A year at 0% everywhere has met its target.")
+    if inp["toggles"]["mix"] == "Optimized":
+        st.caption("Share of the next unit of compute each limit would unlock (marginal view). A year at 0% everywhere has met its target.")
+    else:
+        st.caption("Fixed mix: compute is set by the tightest limit, so it gets 100% (split equally if tied); relieving any other limit adds nothing. A year at 0% everywhere has met its target.")
 
     # ----------------------------------------------------------------------------------------------- 4. satellites
     st.markdown("## 4. Satellites launched by class")
