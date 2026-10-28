@@ -177,8 +177,26 @@ def style_fig(fig, h=380, legend=True):
 
 def fmt(x, d=1):
     if isinstance(x, str): return x
-    if abs(x) >= 1000 or (float(x).is_integer() and abs(x) >= 100): return f"{x:,.0f}"
-    return f"{x:,.{d}f}"
+    try:
+        xf = float(x)
+    except (TypeError, ValueError):
+        return x
+    if xf.is_integer():
+        return f"{xf:,.0f}"
+    if abs(xf) >= 1000:
+        return f"{xf:,.0f}"
+    return f"{xf:,.{d}f}"
+
+
+def fmt_cell(v):
+    """Format dataframe cells; handles numpy int/float that are not Python int/float."""
+    if isinstance(v, str) or isinstance(v, bool) or v is None:
+        return v
+    try:
+        float(v)
+    except (TypeError, ValueError):
+        return v
+    return fmt(v, 1)
 
 
 # ----------------------------------------------------------------------------------------------- state
@@ -615,7 +633,7 @@ with tab_plan:
             st.dataframe(gdf.map(lambda v: fmt(v, 2)), use_container_width=True)
 
     # ----------------------------------------------------------------------------------------------- 6. recommendation
-    st.markdown("## 6. Recommended plan and case comparison")
+    st.markdown("## 6. Recommended plan and scenario comparison")
     st.markdown("<span class='muted'>Optimization maximizes economic value by determining how much launch and solar capacity needs to be added given targets and orbital + satellite mix requirements.</span>", unsafe_allow_html=True)
     c = inp["costs"]
     recs = []
