@@ -60,10 +60,20 @@ section[data-testid="stSidebar"][aria-expanded="true"] {
   width: 24rem !important;
   min-width: 24rem !important;
 }
-section[data-testid="stSidebar"] > div { overflow: visible !important; }
+section[data-testid="stSidebar"] > div {
+  height: 100% !important;
+  overflow: hidden !important;
+}
 section[data-testid="stSidebar"] [data-testid="stSidebarContent"] {
-  overflow: auto !important;
+  height: 100vh !important;
+  max-height: 100vh !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
   background: #0D0D0D !important;
+}
+/* Keep expanded "More toggles" usable when content is tall */
+section[data-testid="stSidebar"] details[open] {
+  max-height: none !important;
 }
 /* Don't push main content aside for the sidebar */
 section.main, div[data-testid="stAppViewContainer"] > section.main,
