@@ -411,7 +411,7 @@ with tab_plan:
             "SSO flights": [_ratio(plan_sso[j], case_sso[j]) for j in range(6)],
             "LEO flights": [_ratio(plan_leo[j], case_leo[j]) for j in range(6)],
             "Solar": [_ratio(plan_sol[j], case_sol[j]) for j in range(6)],
-            "AI chips (effective watts)": [_ratio(plan_chip_w[j], case_chip_w[j]) for j in range(6)],
+            "AI chips effective watts": [_ratio(plan_chip_w[j], case_chip_w[j]) for j in range(6)],
         }
         tg = inp["toggles"]
         row_labels = []
@@ -451,12 +451,12 @@ with tab_plan:
                 continue
             mx, ymx = max(vals, key=lambda t: t[0])
             short = {"SSO flights": "SSO flights", "LEO flights": "LEO flights", "Solar": "solar",
-                     "AI chips (effective watts)": "chips"}[r]
+                     "AI chips effective watts": "chips"}[r]
             if mx <= 1.005:
                 bits.append(f"{short} stays at the case level")
             else:
                 bits.append(f"up to {mx:.1f}x the case's {short} ({ymx})")
-        cy = [YEARS[j] for j in range(6) if outline2[row_keys.index("AI chips (effective watts)")][j]]
+        cy = [YEARS[j] for j in range(6) if outline2[row_keys.index("AI chips effective watts")][j]]
         story = "Plan needs " + "; ".join(bits) + "."
         if cy:
             if len(cy) >= 2 and cy[-1] - cy[0] == len(cy) - 1:
