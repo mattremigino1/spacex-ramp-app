@@ -324,6 +324,12 @@ def compute(inp_json):
         "worth_B": sol_opt["pv"]["npv"] - sol_cust["pv"]["npv"],
         "gw": gw_mix,
     }
+    # What each orbit's flights alone could unlock: rerun with that orbit's flights effectively unlimited
+    # (same as typing a very large number into that orbit's flights row in the Excel case data).
+    base_gw = sum(R["realized"])
+    for key, fkey in (("leo", "flights_leo"), ("sso", "flights_sso"), ("fab", "solar")):
+        v_al = copy.deepcopy(inp); v_al[fkey] = [1e7] * len(inp[fkey])
+        action_vals.setdefault("alone", {})[key] = max(0.0, sum(run(v_al, sol)["realized"]) - base_gw)
     return sol, R, variants, sol_opt, sol_cust, opt_mix_R, action_vals
 
 
@@ -789,8 +795,9 @@ with tab_plan:
             base += f"; without it the plan delivers {gw_lost:,.1f} GW less"
         else:
             base += "; without it the target is still met, but at higher cost"
-        if alone_gw is not None and alone_gw > 0.05:
-            base += f", and alone, this could unlock {alone_gw:,.1f} GW"
+        if alone_gw is not None:
+            base += (f", and alone, this could unlock {alone_gw:,.1f} GW" if alone_gw > 0.05
+                     else ", but alone it would unlock no extra compute")
         return base
 
     def _flight_steps(cap):
@@ -840,8 +847,7 @@ with tab_plan:
         av = action_vals["fab"]
         detail = (f"{fab[next(j for j in range(6) if fab[j] > 1e-6)]:,.1f} GW/yr usable in {y0}, "
                   f"growing to {fab[-1]:,.1f} GW/yr by {YEARS[-1]}; ${sol['pv']['new_fab']:,.0f}B capex (PV)")
-        solar_alone_gw = sum(max(0, x) for x in R["gap_parts"]["solar"])   # relieving solar in isolation (constrained-compute chart)
-        action_cards.append((av["worth_B"], "Commit a solar fab", _worth_line(av["worth_B"], av["gw_lost"], solar_alone_gw),
+        action_cards.append((av["worth_B"], "Commit a solar fab", _worth_line(av["worth_B"], av["gw_lost"], action_vals.get("alone", {}).get("fab")),
                              detail, f"Decide {y0 - c['fab_lead']}"))
 
     for orb, key, cap_key, new_key, orbit_capex in (
@@ -856,7 +862,7 @@ with tab_plan:
         detail = f"Extra flights per year: {steps}"
         if orbit_capex > 0:
             detail += f"; ${orbit_capex:,.0f}B capex (PV)"
-        action_cards.append((av["worth_B"], f"Add {orb} launch capacity", _worth_line(av["worth_B"], av["gw_lost"]),
+        action_cards.append((av["worth_B"], f"Add {orb} launch capacity", _worth_line(av["worth_B"], av["gw_lost"], action_vals.get("alone", {}).get(key)),
                              detail, f"Start {YEARS[j0] - c['launch_lead']}"))
 
     mix_v = action_vals["mix"]
