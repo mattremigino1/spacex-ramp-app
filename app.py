@@ -798,7 +798,7 @@ with tab_plan:
 
     # ----------------------------------------------------------------------------------------------- 8. detail
     st.markdown("## 8. Detailed plan")
-    with st.expander("Selected case by year", expanded=False):
+    with st.expander("Selected scenario by year", expanded=False):
         dr = {}
         dr["Compute launched (GW)"] = [x * mf for x in real]
         for i in range(4): dr[f"{cls[i]['id']} satellites"] = [R["sats"][j][i] * mf for j in range(6)]
