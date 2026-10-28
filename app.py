@@ -783,26 +783,10 @@ with tab_plan:
     st.markdown("## 7. Costs and value of the recommended plan (illustrative)")
     pv = sol["pv"]; ud = sol["undiscounted"]
     e = st.columns(4)
-    e[0].metric("Value of compute (PV)", f"${pv['value']:,.0f}B"); e[1].metric("Total cost (PV)", f"${pv['total']:,.0f}B")
+    e[0].metric("Value of compute (PV)", f"${pv['value']:,.0f}B", "2028-2033", delta_color="off", delta_arrow="off")
+    e[1].metric("Total cost (PV)", f"${pv['total']:,.0f}B")
     e[2].metric("Indicative NPV", f"${pv['npv']:,.0f}B")
     e[3].metric("Undiscounted spend 2028-33", f"${ud['total']:,.0f}B", f"Capacity increases ${ud['new_capex'] + ud['base_capex']:,.0f}B", delta_color="off", delta_arrow="off")
-    ec1, ec2 = st.columns([5.5, 1])
-    with ec2:
-        rel = st.radio("Show", ["$B", "% of yearly cost"], key="costrel")
-    comps = [("Chips", "chips", WHITE), ("Satellite hardware", "hardware", G1), ("Flight operations", "ops", G2), ("Solar cells", "cells", G3),
-             ("New launch capacity", "new_launch", ACC), ("New solar fab", "new_fab", ACC2), ("Base capacity capex", None, "#333333")]
-    with ec1:
-        fig = go.Figure()
-        tot = sol["cost"]["total"]
-        for lab, key_, col in comps:
-            base = [sol["cost"]["base_launch"][j] + sol["cost"]["base_fab"][j] + sol["cost"]["base_terafab"][j] for j in range(6)] if key_ is None else sol["cost"][key_]
-            vals = [(base[j] / tot[j] * 100 if tot[j] else 0) if rel.startswith("%") else base[j] * mf for j in range(6)]
-            fig.add_bar(x=YEARS, y=vals, name=lab, marker_color=col, text=[(f"{v:.0f}%" if rel.startswith("%") else f"{v:,.0f}") if v > (3 if rel.startswith("%") else 0.04 * max(tot) * mf) else "" for v in vals],
-                        textposition="inside", insidetextfont=dict(color="#000000" if col in (WHITE, G1, ACC2) else WHITE))
-        if not rel.startswith("%"):
-            fig.add_scatter(x=YEARS, y=[v * mf for v in sol["cost"]["value"]], name="Value of compute launched", mode="lines+markers", line=dict(color=WHITE, dash="dot"))
-        fig.update_layout(barmode="stack", yaxis_title=("% of cost" if rel.startswith("%") else ("$B / month" if monthly else "$B / year")))
-        st.plotly_chart(style_fig(fig, 380), use_container_width=True)
     with st.expander("Show the numbers"):
         keys = [("Capex: new launch capacity", "new_launch"), ("Capex: new solar fab", "new_fab"), ("Capex: base launch capacity", "base_launch"), ("Capex: base solar fab", "base_fab"),
                 ("Capex: base Terafab", "base_terafab"), ("Flight operations", "ops"), ("Solar cells", "cells"), ("Chips", "chips"), ("Satellite hardware", "hardware"),
