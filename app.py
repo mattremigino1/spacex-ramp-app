@@ -2,7 +2,7 @@
 
 Run locally:  streamlit run app.py
 """
-import copy, json
+import copy, json, math
 import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
@@ -195,8 +195,14 @@ def load_scen_file():
         blob = json.loads(f.getvalue().decode("utf-8"))
         scs = blob["scenarios"]
         assert scs and all("name" in x and "data" in x for x in scs)
-        st.session_state.scen = [{"id": n, "name": x["name"], "data": x["data"]} for n, x in enumerate(scs)]
-        st.session_state.scen[0]["name"] = BASE
+        used, names_ = {BASE, "Ramp"}, [BASE]          # keep names unique: the tabs and dropdown select by name
+        for x in scs[1:]:
+            nm, i = str(x["name"]).strip() or "Scenario", 2
+            cand = nm
+            while cand in used:
+                cand = f"{nm} ({i})"; i += 1
+            used.add(cand); names_.append(cand)
+        st.session_state.scen = [{"id": n, "name": names_[n], "data": x["data"]} for n, x in enumerate(scs)]
         st.session_state.next_id = len(scs)
         st.session_state.tg = {**DEFAULTS["toggles"], **blob.get("toggles", {})}
         st.session_state.v4 = int(blob.get("v4", DEFAULTS["vehicles"][1]["year"]))
@@ -286,11 +292,20 @@ all_tabs = st.tabs(["Ramp"] + scen_names(), key="main_tabs", on_change="rerun")
 tab_plan, scen_tabs = all_tabs[0], all_tabs[1:]
 
 
+def _n(v, old, cast=float):
+    """A table cell as a number; a cleared (blank) cell keeps its previous value."""
+    try:
+        x = float(v)
+    except (TypeError, ValueError):
+        return old
+    return old if math.isnan(x) else cast(x)
+
+
 def year_table(rows, key):
     df = pd.DataFrame({r: vals for r, vals in rows.items()}, index=[str(y) for y in YEARS]).T
     cols = {str(y): st.column_config.NumberColumn(str(y), format="localized") for y in YEARS}
     out = st.data_editor(df, key=k(key), use_container_width=True, column_config=cols)
-    return {r: [float(out.loc[r, str(y)]) for y in YEARS] for r in rows}
+    return {r: [_n(out.loc[r, str(y)], rows[r][j]) for j, y in enumerate(YEARS)] for r in rows}
 
 
 def data_tab(sc):
@@ -333,8 +348,8 @@ def data_tab(sc):
         ce = st.data_editor(cdf, key=k(p_ + "cls"), disabled=["Orbit", "Generation"], use_container_width=True,
                             column_config={lab: num(lab) for lab in ("Compute (kW)", "kW per ton", "Solar multiplier", "Life (yrs)")})
         for c_ in d["classes"]:
-            c_["kw"], c_["kw_per_t"], c_["solar_mult"], c_["life"] = (float(ce.loc[c_["id"], "Compute (kW)"]), float(ce.loc[c_["id"], "kW per ton"]),
-                                                                      float(ce.loc[c_["id"], "Solar multiplier"]), int(ce.loc[c_["id"], "Life (yrs)"]))
+            c_["kw"], c_["kw_per_t"], c_["solar_mult"], c_["life"] = (_n(ce.loc[c_["id"], "Compute (kW)"], c_["kw"]), _n(ce.loc[c_["id"], "kW per ton"], c_["kw_per_t"]),
+                                                                      _n(ce.loc[c_["id"], "Solar multiplier"], c_["solar_mult"]), _n(ce.loc[c_["id"], "Life (yrs)"], c_["life"], int))
     tag("D4-starship-chips")
     with st.expander("Starship, chips, degradation", expanded=True):
         vdf = pd.DataFrame(d["vehicles"]).set_index("name")[["leo", "sso"]]; vdf.columns = ["Payload to LEO (t)", "Payload to SSO (t)"]
@@ -342,13 +357,14 @@ def data_tab(sc):
                             column_config={lab: st.column_config.NumberColumn(lab, format="localized")
                                            for lab in ("Payload to LEO (t)", "Payload to SSO (t)")})
         for v in d["vehicles"]:
-            v["leo"], v["sso"] = float(ve.loc[v["name"], "Payload to LEO (t)"]), float(ve.loc[v["name"], "Payload to SSO (t)"])
+            v["leo"], v["sso"] = _n(ve.loc[v["name"], "Payload to LEO (t)"], v["leo"]), _n(ve.loc[v["name"], "Payload to SSO (t)"], v["sso"])
         chdf = pd.DataFrame(d["chips"]).set_index("name")[["tdp", "util", "first_year"]]; chdf.columns = ["TDP (W)", "Utilization", "First year"]
         che = st.data_editor(chdf, key=k(p_ + "chips"), use_container_width=True,
                              column_config={lab: st.column_config.NumberColumn(lab, format="localized")
                                             for lab in ("TDP (W)", "Utilization", "First year")})
         for c_ in d["chips"]:
-            c_["tdp"], c_["util"], c_["first_year"] = float(che.loc[c_["name"], "TDP (W)"]), float(che.loc[c_["name"], "Utilization"]), int(che.loc[c_["name"], "First year"])
+            c_["tdp"], c_["util"], c_["first_year"] = (_n(che.loc[c_["name"], "TDP (W)"], c_["tdp"]), _n(che.loc[c_["name"], "Utilization"], c_["util"]),
+                                                       _n(che.loc[c_["name"], "First year"], c_["first_year"], int))
         d["solar_deg"] = st.number_input("Solar degradation per year", 0.0, 0.5, float(d["solar_deg"]), 0.005, format="%.3f", key=k(p_ + "sd"))
         d["compute_deg"] = st.number_input("Compute degradation per year", 0.0, 0.5, float(d["compute_deg"]), 0.005, format="%.3f", key=k(p_ + "cd"))
     tag("D5-boards")
@@ -358,7 +374,7 @@ def data_tab(sc):
                             column_config={"Helios-A": st.column_config.NumberColumn("Helios-A", format="localized"),
                                            "Helios-B": st.column_config.NumberColumn("Helios-B", format="localized")})
         for b in d["boards"]:
-            b["a"], b["b"], b["ai"] = float(be.loc[b["name"], "Helios-A"]), float(be.loc[b["name"], "Helios-B"]), bool(be.loc[b["name"], "AI-related"])
+            b["a"], b["b"], b["ai"] = _n(be.loc[b["name"], "Helios-A"], b["a"]), _n(be.loc[b["name"], "Helios-B"], b["b"]), bool(be.loc[b["name"], "AI-related"])
     tag("D6-costs")
     with st.expander("Costs and value"):
         c_ = d["costs"]
@@ -458,6 +474,19 @@ def scenario_row(inp_json):
     return run(x, solve(x))
 
 
+def input_problems(x):
+    """Inputs the model cannot divide by, named in plain English for the data tab."""
+    p = [f"{c['id']}: {lab} must be above zero" for c in x["classes"] for key, lab in (("kw", "compute (kW)"), ("kw_per_t", "kW per ton")) if not c[key] > 0]
+    p += [f"{c['name']}: TDP and utilization must be above zero" for c in x["chips"] if not c["tdp"] * c["util"] > 0]
+    if not sum(x["target"]) > 0:
+        p.append("the compute target must be above zero in at least one year")
+    return p
+
+
+_probs = input_problems(inp)
+if _probs:
+    st.error(f"The model can't run with the **{st.session_state.preset}** data: " + "; ".join(_probs) + ". Fix it in that scenario's data tab.")
+    st.stop()
 try:
     sol, R, VAR, sol_opt, sol_cust, opt_mix_R, action_vals = compute(json.dumps(inp, sort_keys=True))
 except Exception as ex:   # bad input (e.g., a zero payload)
@@ -746,7 +775,8 @@ with tab_plan:
     with uc1:
         fig = go.Figure()
         fig.add_bar(x=YEARS, y=sel_v, name=f"{case_name()}: available", marker_color=G1,
-                    text=[f"{v:,.{dp}f}" if v > 0 else "" for v in sel_v], textposition="inside", insidetextfont=dict(color="#000000"))
+                    text=[f"{v:,.{dp}f}" if v > 0 and g > 1e-9 else "" for v, g in zip(sel_v, gap_v)],   # no gap: the total above already says it
+                    textposition="inside", insidetextfont=dict(color="#000000"))
         fig.add_bar(x=YEARS, y=gap_v, name="Gap to optimized plan", marker_color=ACC,
                     text=[f"{v:,.{dp}f}" if v > 0 else "" for v in gap_v], textposition="inside", insidetextfont=dict(color=WHITE))
         fig.add_scatter(x=YEARS, y=tot_v, mode="text", text=[f"{v:,.{dp}f}" for v in tot_v], textposition="top center",

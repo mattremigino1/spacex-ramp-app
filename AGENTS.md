@@ -4,7 +4,7 @@
 
 I'm Matt, interviewing for a Business Operations role on SpaceX's AI satellites team. The final round is a case on the **AI satellite launch ramp, 2028–33**. I deliver three things:
 
-1. An Excel model, sent in advance. The current version is "20261028 AI Satellite Ramp Case Model 0120.xlsx", which is not in this repo.
+1. An Excel model, sent in advance. The current version is "20261028 AI Satellite Ramp Case Model 0930.xlsx", which is not in this repo.
 2. A PowerPoint of about 10–15 minutes, which includes an "About me" section.
 3. **A live web-app demo of about 30 minutes. This repo is that app.**
 
