@@ -740,7 +740,7 @@ with tab_plan:
 
     for i, (worth_B, title, worth_line, detail, pill) in enumerate(action_cards, 1):
         body = worth_line if not detail else f"{worth_line}<br>{detail}"
-        st.markdown(f"<div class='rec'><span class='pill'>{i}</span><b>{title}</b> <span class='pill'>{pill}</span><br>"
+        st.markdown(f"<div class='rec'><span class='pill'>{i}</span><b>{title}</b><br>"
                     f"<span class='muted'>{body}</span></div>", unsafe_allow_html=True)
 
     # Remaining-gap card last (not ranked with actions)
