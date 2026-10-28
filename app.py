@@ -49,41 +49,51 @@ header[data-testid="stHeader"] #MainMenu {
 header[data-testid="stHeader"] #MainMenu button {
   pointer-events: auto !important;
 }
-/* Sidebar open/close only — specific testids, not all header buttons */
+/* Expand control when sidebar is closed — always reachable top-left */
 [data-testid="stExpandSidebarButton"],
-[data-testid="stSidebarCollapseButton"] {
+[data-testid="collapsedControl"] {
   position: fixed !important;
   left: 0.4rem !important;
   top: 0.55rem !important;
   z-index: 100002 !important;
+  display: block !important;
+  visibility: visible !important;
 }
-/* Overlay sidebar when open; let Streamlit collapse/close it */
-section[data-testid="stSidebar"] {
+/* Overlay ONLY while open. Always forcing left:0 was preventing close. */
+section[data-testid="stSidebar"][aria-expanded="true"] {
   position: fixed !important;
   left: 0 !important;
   top: 0 !important;
   height: 100vh !important;
-  z-index: 100000 !important;
-}
-/* Only pin width while expanded — forced width was blocking close */
-section[data-testid="stSidebar"][aria-expanded="true"] {
   width: 24rem !important;
   min-width: 24rem !important;
+  z-index: 100000 !important;
 }
-section[data-testid="stSidebar"] > div {
+section[data-testid="stSidebar"][aria-expanded="false"] {
+  left: -30rem !important;
+  width: 0 !important;
+  min-width: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+section[data-testid="stSidebar"][aria-expanded="true"] > div {
   height: 100% !important;
   overflow: hidden !important;
 }
-section[data-testid="stSidebar"] [data-testid="stSidebarContent"] {
+section[data-testid="stSidebar"][aria-expanded="true"] [data-testid="stSidebarContent"] {
   height: 100vh !important;
   max-height: 100vh !important;
   overflow-y: auto !important;
   overflow-x: hidden !important;
   background: #0D0D0D !important;
 }
-/* Keep expanded "More toggles" usable when content is tall */
-section[data-testid="stSidebar"] details[open] {
-  max-height: none !important;
+/* Collapse chevron inside the open sidebar */
+section[data-testid="stSidebar"][aria-expanded="true"] [data-testid="stSidebarCollapseButton"],
+section[data-testid="stSidebar"][aria-expanded="true"] button[kind="headerNoPadding"] {
+  position: sticky !important;
+  top: 0.4rem !important;
+  z-index: 100001 !important;
+  display: inline-flex !important;
 }
 /* Don't push main content aside for the sidebar */
 section.main, div[data-testid="stAppViewContainer"] > section.main,
