@@ -439,7 +439,7 @@ with tab_plan:
                     fig2.add_shape(type="rect", x0=j - 0.5, x1=j + 0.5, y0=i - 0.5, y1=i + 0.5, line=dict(color=WHITE, width=3))
         fig2.update_yaxes(autorange="reversed", showgrid=False)
         st.plotly_chart(style_fig(fig2, 300, legend=False), use_container_width=True)
-        st.caption("Optimized case for the current settings: increase in resources required above current plan. White outline = limit holding compute back.")
+        st.caption("Amount of current planned resource required to achieve optimal plan. White outline = limit holding compute back.")
 
         # Plain-English read-out from the ratios
         bits = []
