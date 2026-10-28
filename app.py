@@ -30,6 +30,19 @@ h1 { font-size: 1.9rem !important; } h2 { font-size: 1.15rem !important; margin-
 .rec { background: #0D0D0D; border: 1px solid #262626; border-radius: 10px; padding: 0.9rem 1.1rem; margin-bottom: 0.6rem; }
 .rec b { letter-spacing: 0.03em; }
 .pill { display:inline-block; border:1px solid #595959; border-radius: 999px; padding: 0.05rem 0.6rem; font-size: 0.78rem; color:#BFBFBF; margin-right:0.4rem; }
+/* Compact Streamlit chrome: header only as wide as its controls */
+header[data-testid="stHeader"] {
+  background: transparent !important;
+  width: auto !important;
+  left: auto !important;
+  right: 0 !important;
+  position: absolute !important;
+}
+div[data-testid="stToolbar"] {
+  width: fit-content !important;
+  max-width: fit-content !important;
+  background: transparent !important;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -209,7 +222,7 @@ def binds_story():
 
 
 st.markdown(f"<div class='answer'><b>{case_name()}:</b> delivers <b>{cum_r:,.1f} GW</b> of the {cum_t:,.0f} GW 2028-33 target "
-            f"(<b>{cum_r / cum_t:.0%}</b>). What binds: {binds_story()}.<br>"
+            f"(<b>{cum_r / cum_t:.0%}</b>).<br>What binds: {binds_story()}.<br>"
             f"<span class='muted'>The recommended plan (cheapest added launch capacity and solar fab) reaches {sum(sol['compute']):,.1f} GW "
             f"({sum(sol['compute']) / cum_t:.0%}); see the recommendation section.</span></div>", unsafe_allow_html=True)
 
