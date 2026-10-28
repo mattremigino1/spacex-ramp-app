@@ -336,8 +336,14 @@ cum_t, cum_r = sum(T), sum(real)
 
 
 def case_name():
-    """Selected scenario from the dropdown; '(edited)' if the inputs no longer match that preset."""
+    """Headline name: the dropdown scenario, adjusted for the limit toggles.
+
+    All three limits off -> "Unconstrained"; some off -> "<scenario>, <x> limit off".
+    "(edited)" if any other input differs from the scenario (Run optimizer and limit toggles don't count).
+    """
     preset = st.session_state.preset
+    tg = inp["toggles"]
+    off = [lab for key_, lab in (("launch_on", "flight"), ("solar_on", "solar"), ("chips_on", "chip")) if tg.get(key_, 1) != 1]
     def norm(x):
         if isinstance(x, bool): return x
         if isinstance(x, (int, float)): return round(float(x), 9)
@@ -346,14 +352,21 @@ def case_name():
         return x
     try:
         ref, cur = norm(scenarios.apply(preset, DEFAULTS)), norm(inp)
-        if preset == "Unconstrained":   # with every limit off, the mix toggle doesn't count as an edit
-            ref["toggles"].pop("mix", None); cur["toggles"].pop("mix", None)
-        ref["toggles"].pop("apply_solver", None); cur["toggles"].pop("apply_solver", None)   # Run optimizer isn't an edit
+        ignore = ["apply_solver", "launch_on", "solar_on", "chips_on"]
+        if len(off) == 3:   # with every limit off, the mix doesn't change the answer
+            ignore.append("mix")
+        for key_ in ignore:
+            ref["toggles"].pop(key_, None); cur["toggles"].pop(key_, None)
         same = ref == cur
     except Exception:
         same = True
-    return preset if same else f"{preset} (edited)"
-
+    if len(off) == 3:
+        name = "Unconstrained"
+    elif off:
+        name = f"{preset}, {' and '.join(off)} limit{'s' if len(off) > 1 else ''} off"
+    else:
+        name = preset
+    return name if same else f"{name} (edited)"
 
 with tab_plan:
     # ----------------------------------------------------------------------------------------------- header + answer
