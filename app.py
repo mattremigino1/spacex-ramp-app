@@ -781,8 +781,6 @@ with tab_plan:
 
     # ----------------------------------------------------------------------------------------------- 7. economics
     st.markdown("## 7. Costs and value of the recommended plan (illustrative)")
-    st.markdown("<span class='muted'>Cost inputs and the $15/W/yr contribution are added assumptions; the case data has no costs. Present values in 2028 dollars at the discount rate. "
-                "Pre-tax; capacity left after 2033 gets no value.</span>", unsafe_allow_html=True)
     pv = sol["pv"]; ud = sol["undiscounted"]
     e = st.columns(4)
     e[0].metric("Value of compute (PV)", f"${pv['value']:,.0f}B"); e[1].metric("Total cost (PV)", f"${pv['total']:,.0f}B")
