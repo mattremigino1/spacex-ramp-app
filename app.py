@@ -43,6 +43,18 @@ div[data-testid="stToolbar"] {
   max-width: fit-content !important;
   background: transparent !important;
 }
+/* Wider sidebar + don't clip the scenario dropdown menu */
+section[data-testid="stSidebar"] {
+  width: 24rem !important;
+  min-width: 24rem !important;
+}
+section[data-testid="stSidebar"] > div { overflow: visible !important; }
+section[data-testid="stSidebar"] [data-testid="stSidebarContent"] { overflow: visible !important; }
+div[data-baseweb="popover"], div[data-baseweb="menu"], [data-testid="stSelectboxVirtualDropdown"],
+ul[role="listbox"], div.st-key-preset_box [role="listbox"] {
+  min-width: 22rem !important;
+  z-index: 1000000 !important;
+}
 </style>
 """, unsafe_allow_html=True)
 
