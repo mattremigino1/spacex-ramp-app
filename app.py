@@ -401,18 +401,29 @@ with tab_plan:
         fig = go.Figure()
         for gname, idx in groups.items():
             vals = acc([sum(R["comp_cls"][j][i] for i in idx) * mf for j in range(6)])
-            fig.add_bar(x=YEARS, y=vals, name=gname, marker_color=gcol.get(gname, CLASS_COL.get(gname, WHITE)), text=[fmt(v, 2 if monthly else 1) for v in vals], textposition=("outside" if split == "Total" else "inside"), insidetextanchor="end",
-                        insidetextfont=dict(color="#000000" if gcol.get(gname, CLASS_COL.get(gname, WHITE)) in (WHITE, G1, ACC2) else WHITE),
-                        outsidetextfont=dict(color=WHITE), cliponaxis=False)
+            gc_ = gcol.get(gname, CLASS_COL.get(gname, WHITE))
+            fig.add_bar(x=YEARS, y=vals, name=gname, marker_color=gc_,
+                        text=(None if split == "Total" else [fmt(v, 2 if monthly else 1) for v in vals]), textposition="inside", insidetextanchor="end",
+                        insidetextfont=dict(color="#000000" if gc_ in (WHITE, G1, ACC2) else WHITE))
         tot1 = acc([sum(R["comp_cls"][j][i] for i in range(4)) * mf for j in range(6)])
-        if split != "Total":   # with one series the inside label already is the total
-            fig.add_scatter(x=YEARS, y=tot1, mode="text", text=[fmt(v, 2 if monthly else 1) for v in tot1], textposition="top center",
-                            textfont=dict(color=WHITE), showlegend=False, hoverinfo="skip")
         tv = acc([x * mf for x in T])
         fig.add_scatter(x=YEARS, y=tv, name="Target", mode="lines+markers+text", line=dict(color=G2, dash="dash", width=2), text=[fmt(v, 2 if monthly else 1) for v in tv], textposition="top center", textfont=dict(color=G1))
+        # Bar totals as annotations; if one would sit on the target label, lift the bar total above it.
+        H1, MT, MB = 400, 20, 90                       # figure height and top/bottom margins (see style_fig)
+        ymax1 = max(tot1 + tv + [1e-9]) * 1.15
+        ppu = (H1 - MT - MB) / ymax1                    # pixels per y-unit
+        for j, y_ in enumerate(YEARS):
+            bar_px, tgt_px = tot1[j] * ppu, tv[j] * ppu
+            shift = 4                                   # default gap above the bar
+            if abs((bar_px + 4) - (tgt_px + 6)) < 17:   # labels would overlap (each ~16 px tall)
+                shift = tgt_px + 24 - bar_px            # place the bar total just above the target label
+            fig.add_annotation(x=y_, y=tot1[j], text=fmt(tot1[j], 2 if monthly else 1), showarrow=False, yanchor="bottom", yshift=shift,
+                               font=dict(color=WHITE, size=13))
         fig.update_layout(barmode="stack", yaxis_title=("Cumulative GW" if cum else unit_gw))
+        fig = style_fig(fig, H1)
+        fig.update_yaxes(range=[0, ymax1])
         tag("1-chart")
-        st.plotly_chart(style_fig(fig, 400), use_container_width=True)
+        st.plotly_chart(fig, use_container_width=True)
     tag("1-table")
     with st.expander("Show the numbers"):
         rows = {"Target": [x * mf for x in T]}
@@ -625,7 +636,7 @@ with tab_plan:
     bc = st.columns(3)
     for col, lab, val, color in ((bc[0], f"Available, {lab_sfx}", sp, WHITE), (bc[1], f"Needed for optimized plan, {lab_sfx}", nd, WHITE),
                                  (bc[2], f"Gap, {lab_sfx}", gp_, ACC)):
-        col.markdown(f"<div style='text-transform:uppercase;letter-spacing:0.08em;font-size:0.72rem;color:#BFBFBF'>{lab}</div>"
+        col.markdown(f"<div style='text-transform:uppercase;letter-spacing:0.08em;font-size:0.72rem;line-height:1.35;min-height:2.7em;color:#BFBFBF'>{lab}</div>"
                      f"<div style='font-size:2.0rem;font-weight:600;color:{color}'>{big(val)} <span style='font-size:1rem;color:#8C8C8C'>{unit_r}</span></div>",
                      unsafe_allow_html=True)
     tag("3-table")
@@ -691,7 +702,7 @@ with tab_plan:
         val = tot_i / 72 if monthly else tot_i
         unit5 = "satellites" if is_num else "GW"
         txt5 = (f"{val:,.0f}" if not monthly else f"{val:,.1f}") if is_num else f"{val:,.{2 if monthly else 1}f}"
-        col_.markdown(f"<div style='text-transform:uppercase;letter-spacing:0.08em;font-size:0.72rem;color:#BFBFBF'>{cls[i]['id']}, {lab_sfx5}</div>"
+        col_.markdown(f"<div style='text-transform:uppercase;letter-spacing:0.08em;font-size:0.72rem;line-height:1.35;min-height:2.7em;color:#BFBFBF'>{cls[i]['id']}, {lab_sfx5}</div>"
                       f"<div style='font-size:2.0rem;font-weight:600;color:{CLASS_COL[cls[i]['id']]}'>{txt5} <span style='font-size:1rem;color:#8C8C8C'>{unit5}</span></div>",
                       unsafe_allow_html=True)
     tag("5-table")
@@ -750,7 +761,7 @@ with tab_plan:
             main_txt, small_txt = f"{pct:.0%}", f"{gw_txt} GW"
         else:
             main_txt, small_txt = f"{gw_txt} <span style='font-size:1rem;color:#8C8C8C'>GW</span>", f"{pct:.0%} of cumulative gap"
-        col_.markdown(f"<div style='text-transform:uppercase;letter-spacing:0.08em;font-size:0.72rem;color:#BFBFBF'>{lab}, {lab_sfx6}</div>"
+        col_.markdown(f"<div style='text-transform:uppercase;letter-spacing:0.08em;font-size:0.72rem;line-height:1.35;min-height:2.7em;color:#BFBFBF'>{lab}, {lab_sfx6}</div>"
                       f"<div style='font-size:2.0rem;font-weight:600;color:{colr}'>{main_txt}</div>"
                       f"<div style='font-size:0.8rem;color:#8C8C8C'>{small_txt}</div>", unsafe_allow_html=True)
     tag("6-table")
@@ -909,14 +920,10 @@ with tab_plan:
         e = st.columns(4)
         e[0].metric("Value of compute (PV)", f"${pv['value']:,.0f}B", delta_color="off", delta_arrow="off")
         e[1].metric("Total cost (PV)", f"${pv['total']:,.0f}B", delta_color="off", delta_arrow="off")
-        e[2].markdown(f"<div style='padding-top:0.25rem'><div style='text-transform:uppercase;letter-spacing:0.08em;font-size:0.72rem;color:#BFBFBF'>NPV</div>"
-                      f"<div style='font-size:2.25rem;font-weight:600;color:{ACC};line-height:1.4'>${pv['npv']:,.0f}B</div></div>", unsafe_allow_html=True)
-        if abs(plan_adds) < 5:
-            e[3].metric("NPV the recommended plan adds", "≈ $0B",
-                        "Selected case is the recommended plan", delta_color="off", delta_arrow="off")
-        else:
-            e[3].metric("NPV the recommended plan adds", f"${plan_adds:,.0f}B",
-                        f"Plan NPV ${plan_npv:,.0f}B", delta_color="off", delta_arrow="off")
+        e[2].markdown(f"<div style='padding-top:0.375rem'><div style='text-transform:uppercase;letter-spacing:0.08em;font-size:0.72rem;color:#BFBFBF'>NPV</div>"
+                      f"<div style='font-size:2.25rem;font-weight:600;color:{ACC};line-height:1.15;margin-top:0.1rem'>${pv['npv']:,.0f}B</div></div>", unsafe_allow_html=True)
+        gain_txt = "≈ $0B" if abs(plan_adds) < 5 else (f"+${plan_adds:,.0f}B" if plan_adds > 0 else f"−${abs(plan_adds):,.0f}B")
+        e[3].metric("NPV gain from optimized plan", gain_txt)
         tag("8-table")
         with st.expander("Show the numbers"):
             rows = [
