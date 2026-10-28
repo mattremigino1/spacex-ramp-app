@@ -657,7 +657,7 @@ with tab_plan:
                            "Solar used (GW)": sum(Rv["solar_used"]), "Orion chips (M)": sum(Rv["orion_used"]) / 1e6, "Vega chips (M)": sum(Rv["vega_used"]) / 1e6}
     cdf = pd.DataFrame(comp_rows).T
     cdf.loc["Unconstrained", "% of target"] = "100%"
-    st.markdown("**Cases side by side** (whole satellites)")
+    st.markdown("**Cases side by side**")
     st.dataframe(cdf.map(lambda v: fmt(v, 1) if isinstance(v, float) else v), use_container_width=True)
     st.caption("Recommended plan = the selected settings plus the Solver's added launch capacity and solar fab, run through the model in whole satellites.")
 
