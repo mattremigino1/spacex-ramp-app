@@ -785,7 +785,7 @@ with tab_plan:
     e = st.columns(4)
     e[0].metric("Value of compute (PV)", f"${pv['value']:,.0f}B"); e[1].metric("Total cost (PV)", f"${pv['total']:,.0f}B")
     e[2].metric("Indicative NPV", f"${pv['npv']:,.0f}B")
-    e[3].metric("Undiscounted spend 2028-33", f"${ud['total']:,.0f}B", f"capex ${ud['new_capex'] + ud['base_capex']:,.0f}B", delta_color="off", delta_arrow="off")
+    e[3].metric("Undiscounted spend 2028-33", f"${ud['total']:,.0f}B", f"Capacity increases ${ud['new_capex'] + ud['base_capex']:,.0f}B", delta_color="off", delta_arrow="off")
     ec1, ec2 = st.columns([5.5, 1])
     with ec2:
         rel = st.radio("Show", ["$B", "% of yearly cost"], key="costrel")
