@@ -64,7 +64,7 @@ tests/expected.json    Expected values for that test
 
 1. `load_defaults()` returns the inputs.
 2. The sidebar edits `st.session_state.inp`.
-3. `compute(json)` is cached with `st.cache_data`. It solves the plan for both mix settings (optimized and fixed), runs `run(inp, sol)`, runs three comparison variants (Unconstrained, Base case (constrained), Optimized (constrained)), and re-solves once per recommended addition with that addition blocked to value it.
+3. `compute(json)` is cached with `st.cache_data`. It solves the plan for both mix settings (optimized and fixed), runs `run(inp, sol)`, builds three comparison rows (Unconstrained = the Excel unconstrained tab, i.e. the target at the selected mix; Base case (constrained); Optimized (constrained)), and re-solves once per recommended addition with that addition blocked to value it.
 4. The sections render from `R` (the engine output), `sol` (the solver output) and `selected_case_economics()` (section 7).
 
 ### Engine concepts

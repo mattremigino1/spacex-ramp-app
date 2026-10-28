@@ -290,8 +290,12 @@ def compute(inp_json):
     R = run(inp, sol)
     variants = {}
     # Table rows match the scenario dropdown; Optimized (constrained) = solver plan
-    for name, mod in (("Unconstrained", dict(launch_on=0, solar_on=0, chips_on=0, apply_solver=0)),
-                      ("Base case (constrained)", dict(apply_solver=0)),
+    # Unconstrained = the Excel "Satellite ramp (unconstrained)" tab: the target built at the selected case's mix
+    U_ = R["unconstrained"]
+    variants["Unconstrained"] = {"realized": [sum(c_) for c_ in U_["comp_cls"]], "sats": U_["sats_cls"],
+                                 "flights_sso": U_["flights_sso"], "flights_leo": U_["flights_leo"],
+                                 "solar_used": U_["solar"], "orion_used": U_["orion"], "vega_used": U_["vega"]}
+    for name, mod in (("Base case (constrained)", dict(apply_solver=0)),
                       ("Optimized (constrained)", dict(apply_solver=1))):
         v = copy.deepcopy(inp); v["toggles"].update(mod)
         variants[name] = run(v, sol)
