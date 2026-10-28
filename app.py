@@ -602,14 +602,14 @@ with tab_plan:
                     text=[f"{v:,.{dp}f}" if v > 0 else "" for v in sel_v], textposition="inside", insidetextfont=dict(color="#000000"))
         fig.add_bar(x=YEARS, y=gap_v, name="Gap to optimized plan", marker_color=ACC,
                     text=[f"{v:,.{dp}f}" if v > 0 else "" for v in gap_v], textposition="inside", insidetextfont=dict(color=WHITE))
-        fig.add_scatter(x=YEARS, y=tot_v, mode="text", text=[f"Need {v:,.{dp}f}" for v in opt_v], textposition="top center",
+        fig.add_scatter(x=YEARS, y=tot_v, mode="text", text=[f"{v:,.{dp}f}" for v in tot_v], textposition="top center",
                         textfont=dict(color=WHITE), showlegend=False, hoverinfo="skip")
         fig.update_layout(barmode="stack", yaxis_title=f"{unit_r} / {'month' if monthly else 'year'}")
         fig = style_fig(fig, 380)
         fig.update_yaxes(range=[0, max(tot_v + [1e-9]) * 1.15])
         tag("3-chart")
         st.plotly_chart(fig, use_container_width=True)
-    st.caption("Gray: resources available each year in the selected scenario (that year's new supply, used or not). Blue: the additional amount the optimized plan needs. Label above each bar: the optimized plan's total need. Where supply already covers the need there is no gap; the optimized plan can also draw on chips or solar carried forward from earlier years.")
+    st.caption("Units of the chosen resource used each year by the selected case and by the optimized case.")
     tag("3-totals")
     if monthly:
         k_ = 72; lab_sfx = "avg / month, 2028-33"
