@@ -171,8 +171,8 @@ with st.sidebar:
     t["launch_on"] = int(st.toggle("Starship flight limit", value=t["launch_on"] == 1, key=k("lon")))
     t["solar_on"] = int(st.toggle("Solar limit", value=t["solar_on"] == 1, key=k("son")))
     t["chips_on"] = int(st.toggle("AI chip limit", value=t["chips_on"] == 1, key=k("con")))
-    _mix = st.radio("Class and orbit mix", ["Optimized", "Input"], index=0 if t["mix"] == "Optimized" else 1, horizontal=True, key=k("mix"),
-                    help="Optimized picks the split that maximizes compute under the active limits; Input uses the seed mix on the Data and assumptions tab.")
+    _mix = st.radio("Class and orbit mix", ["Optimized", "Fixed"], index=0 if t["mix"] == "Optimized" else 1, horizontal=True, key=k("mix"),
+                    help="Optimized picks the split that maximizes compute under the active limits; Fixed uses the seed mix on the Data and assumptions tab.")
     t["mix"] = "Optimized" if _mix == "Optimized" else "Custom"
     t["apply_solver"] = int(st.toggle("Run optimizer", value=t.get("apply_solver", 0) == 1, key=k("apply"),
                                       help="Adds the launch capacity and solar fab the Solver recommends, then runs the plan in whole satellites."))
