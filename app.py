@@ -176,24 +176,26 @@ with st.sidebar:
     st.selectbox("Preset", names, index=names.index(st.session_state.preset), key="preset_box", on_change=set_preset, label_visibility="collapsed")
     tag("S-reset")
     st.button("Reset to case data", on_click=reset, use_container_width=True)
+    t = inp["toggles"]
+    tag("S-optimizer")
+    t["apply_solver"] = int(st.toggle("Run optimizer", value=t.get("apply_solver", 0) == 1, key=k("apply"),
+                                      help="Adds optimal levels of launch and solar capacity to unlock compute and maximize economic value"))
     tag("S-monthly")
     monthly = st.toggle("Show flows per month", value=False, help="Monthly = average monthly pace (each year split evenly). Cumulative views are switched off.")
 
-    st.markdown("### Toggles")
-    t = inp["toggles"]
+    st.markdown("### Constraints")
     tag("S-flight-limit")
     t["launch_on"] = int(st.toggle("Starship flight limit", value=t["launch_on"] == 1, key=k("lon")))
     tag("S-solar-limit")
     t["solar_on"] = int(st.toggle("Solar limit", value=t["solar_on"] == 1, key=k("son")))
     tag("S-chip-limit")
     t["chips_on"] = int(st.toggle("AI chip limit", value=t["chips_on"] == 1, key=k("con")))
+
+    st.markdown("### Operations")
     tag("S-mix")
     _mix = st.radio("Class and orbit mix", ["Flexible/optimized", "Fixed"], index=0 if t["mix"] == "Optimized" else 1, horizontal=True, key=k("mix"),
                     help="Flexible/optimized lets the model and the optimizer pick the class split that maximizes compute or minimizes cost. Fixed holds each year's split at the seed mix table (editable on the Data and assumptions tab), for both the selected case and the optimizer's plan.")
     t["mix"] = "Optimized" if _mix == "Flexible/optimized" else "Custom"
-    tag("S-optimizer")
-    t["apply_solver"] = int(st.toggle("Run optimizer", value=t.get("apply_solver", 0) == 1, key=k("apply"),
-                                      help="Adds optimal levels of launch and solar capacity to unlock compute and maximize economic value"))
     tag("S-eol")
     t["eol_sizing"] = int(st.toggle("Size solar for end of life", value=t["eol_sizing"] == 1, key=k("eol")))
     tag("S-chip-carry")
@@ -411,7 +413,7 @@ with tab_plan:
     m[4].metric("Shortfall vs target", f"{1 - cum_r / cum_t:.0%}", f"{cum_t - cum_r:,.1f} GW missed", delta_color="off", delta_arrow="off")
 
     # ----------------------------------------------------------------------------------------------- 1. ramp vs target
-    st.markdown("## 1. Compute launched vs. target")
+    st.markdown("## Compute launched vs. target")
     c1, c2 = st.columns([5.5, 1])
     with c2:
         tag("1-controls")
@@ -449,7 +451,7 @@ with tab_plan:
         st.download_button("Download CSV", df.to_csv().encode(), "ramp.csv", key="dl1")
 
     # ----------------------------------------------------------------------------------------------- 2. what binds
-    st.markdown("## 2. Utilization of each constraint")
+    st.markdown("## Utilization of each constraint")
     tag("2-tabs")
     tab_binds_today, tab_plan_needs = st.tabs(["What binds today", "What is needed"])
 
@@ -599,7 +601,7 @@ with tab_plan:
             st.dataframe(dd2.map(lambda v: fmt(v, 2 if unit.endswith("GW") else 1)), use_container_width=True)
 
     # ----------------------------------------------------------------------------------------------- 3. units needed
-    st.markdown("## 3. Resources needed to reach the optimized case")
+    st.markdown("## Resources needed to reach the optimized case")
     OPT = VAR["Optimized (constrained)"]
     res_opts = {
         "SSO flights": ("flights", lambda Rx: Rx["flights_sso"], 1),
@@ -640,7 +642,7 @@ with tab_plan:
         st.download_button("Download CSV", udf.to_csv().encode(), "resources.csv", key="dl3")
 
     # ----------------------------------------------------------------------------------------------- 4. lever strength
-    st.markdown("## 4. Annual bottlenecks")
+    st.markdown("## Annual bottlenecks")
     lev = R["lever"]; labels = ["SSO flights", "LEO flights", "Solar", "Chips"]; lc = [WHITE, ACC, G1, G3]
     fig = go.Figure()
     for i, l in enumerate(labels):
@@ -660,7 +662,7 @@ with tab_plan:
         st.dataframe(ldf, use_container_width=True)
 
     # ----------------------------------------------------------------------------------------------- 4. satellites
-    st.markdown("## 5. Satellites launched by class")
+    st.markdown("## Satellites launched by class")
     cc1, cc2 = st.columns([5.5, 1])
     with cc2:
         tag("5-controls")
@@ -687,7 +689,7 @@ with tab_plan:
         st.dataframe(sdf.map(lambda v: f"{v:,.0f}" if measure.startswith("Number") else f"{v:,.2f}"), use_container_width=True)
 
     # ----------------------------------------------------------------------------------------------- 5. closing the gap
-    st.markdown("## 6. Constrained compute by resource")
+    st.markdown("## Constrained compute by resource")
     gp = R["gap_parts"]
     parts = [("Orbit and satellite mix", "mix", G2), ("Flights alone", "flights", WHITE), ("Solar alone", "solar", G1), ("Flights and solar together", "together", ACC), ("Chips", "chips", G3)]
     gc1, gc2 = st.columns([5.5, 1])
@@ -729,7 +731,7 @@ with tab_plan:
             st.dataframe(gdf.map(lambda v: fmt(v, 2)), use_container_width=True)
 
     # ----------------------------------------------------------------------------------------------- 6. recommendation
-    st.markdown("## 7. Recommended plan and scenario comparison")
+    st.markdown("## Recommended plan and scenario comparison")
     st.markdown("<span class='muted'>Optimization maximizes economic value by determining how much launch and solar capacity needs to be added given targets and orbital + satellite mix requirements.</span>", unsafe_allow_html=True)
     c = inp["costs"]
 
@@ -856,7 +858,7 @@ with tab_plan:
     st.dataframe(cdf.map(fmt_cell), use_container_width=True)
 
     # ----------------------------------------------------------------------------------------------- 7. economics
-    st.markdown("## 8. Economics of the selected case")
+    st.markdown("## Economics of the selected case")
     econ = selected_case_economics(inp, R, sol)
     if not econ["meaningful"]:
         tag("8-note")
@@ -898,7 +900,7 @@ with tab_plan:
             st.download_button("Download CSV", edf.to_csv().encode(), "economics.csv", key="dl7")
 
     # ----------------------------------------------------------------------------------------------- 8. detail
-    st.markdown("## 9. Detailed plan")
+    st.markdown("## Detailed plan")
     tag("9-table")
     with st.expander("Selected scenario by year", expanded=False):
         dr = {}

@@ -49,7 +49,7 @@ The economics are illustrative because the cost inputs are added assumptions:
 ## Architecture
 
 ```
-app.py                 Streamlit UI (Ramp tab with 9 numbered sections, Data and assumptions tab, sidebar toggles)
+app.py                 Streamlit UI (Ramp tab with 9 sections, Data and assumptions tab, sidebar: Scenario, Constraints, Operations)
 model/engine.py        The Excel model ported row by row: run(inp, solver=None) -> dict of per-year lists
 model/solver.py        Target solver LP (scipy HiGHS): solve(inp) -> plan, costs, PV, undiscounted totals
 model/economics.py     Selected-case economics; mirrors section J of the Excel Summary tab

@@ -22,15 +22,15 @@ Opens at http://localhost:8501. No internet needed once the packages are install
 | Section | What it shows |
 |---|---|
 | Headline | Selected scenario vs. target, what binds by year, big numbers (per-month averages when monthly is on) |
-| 1. Compute vs. target | Annual or cumulative; total, by orbit, generation, or class |
-| 2. Utilization of each constraint | Heat map, two tabs: what binds in the selected case today, and what the recommended plan needs vs. case supply; drill into any row for units |
-| 3. Resources needed to reach the optimized case | Side-by-side bars by year: units of the chosen resource used by the selected case vs. the optimized case |
-| 4. Annual bottlenecks | Share of the next unit of compute each limit would unlock |
-| 5. Satellites by class | Number or compute, annual or cumulative |
-| 6. Constrained compute by resource | Gap split into mix, flights alone, solar alone, flights + solar together, chips |
-| 7. Recommended plan | Optimizer actions ranked by value at stake, plus a scenario comparison |
-| 8. Economics of the selected case | Value, cost, indicative NPV, and how much the recommended plan adds (costs are added assumptions) |
-| 9. Detailed plan | Year-by-year table with CSV download |
+| Compute vs. target | Annual or cumulative; total, by orbit, generation, or class |
+| Utilization of each constraint | Heat map, two tabs: what binds in the selected case today, and what the recommended plan needs vs. case supply; drill into any row for units |
+| Resources needed to reach the optimized case | Side-by-side bars by year: units of the chosen resource used by the selected case vs. the optimized case |
+| Annual bottlenecks | Share of the next unit of compute each limit would unlock |
+| Satellites by class | Number or compute, annual or cumulative |
+| Constrained compute by resource | Gap split into mix, flights alone, solar alone, flights + solar together, chips |
+| Recommended plan | Optimizer actions ranked by value at stake, plus a scenario comparison |
+| Economics of the selected case | Value, cost, indicative NPV, and how much the recommended plan adds (costs are added assumptions) |
+| Detailed plan | Year-by-year table with CSV download |
 
 The sidebar holds the scenario dropdown (Base case for now) and all toggles: switch the three limits off for the unconstrained case, or switch on Run optimizer for the optimized case. Every case input and cost assumption is editable on the Data and assumptions tab. Six risk presets remain in `model/scenarios.py` (`RISK_PRESETS`) but are not in the dropdown.
 
