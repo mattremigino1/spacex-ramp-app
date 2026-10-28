@@ -30,12 +30,14 @@ h1 { font-size: 1.9rem !important; } h2 { font-size: 1.15rem !important; margin-
 .rec { background: #0D0D0D; border: 1px solid #262626; border-radius: 10px; padding: 0.9rem 1.1rem; margin-bottom: 0.6rem; }
 .rec b { letter-spacing: 0.03em; }
 .pill { display:inline-block; border:1px solid #595959; border-radius: 999px; padding: 0.05rem 0.6rem; font-size: 0.78rem; color:#BFBFBF; margin-right:0.4rem; }
-/* Transparent header; keep Deploy on the right, sidebar toggle on the left */
+/* Transparent header must not steal clicks over the sidebar collapse control */
 header[data-testid="stHeader"] {
   background: transparent !important;
+  pointer-events: none !important;
 }
 div[data-testid="stToolbar"] {
   background: transparent !important;
+  pointer-events: none !important;
 }
 /* ⋮ menu on the right — do NOT use the broad headerNoPadding selector
    (that also matches #MainMenu and was pinning the menu on the left). */
@@ -45,6 +47,7 @@ header[data-testid="stHeader"] #MainMenu {
   right: 1rem !important;
   left: unset !important;
   z-index: 1000100 !important;
+  pointer-events: auto !important;
 }
 header[data-testid="stHeader"] #MainMenu button {
   pointer-events: auto !important;
@@ -61,6 +64,7 @@ section[data-testid="stSidebar"] {
   max-width: 24rem !important;
   z-index: 100000 !important;
   transition: transform 0.2s ease, visibility 0.2s ease !important;
+  pointer-events: auto !important;
 }
 section[data-testid="stSidebar"][data-collapsed="false"] {
   transform: none !important;
@@ -72,27 +76,39 @@ section[data-testid="stSidebar"][data-collapsed="true"] {
   visibility: hidden !important;
   pointer-events: none !important;
 }
+/* Width is fixed — hide resize handle so it cannot cover the collapse click */
+[data-testid="stSidebarResizeHandle"] {
+  display: none !important;
+  pointer-events: none !important;
+}
 section[data-testid="stSidebar"] [data-testid="stSidebarContent"] {
   height: 100vh !important;
   max-height: 100vh !important;
   overflow-y: auto !important;
   overflow-x: hidden !important;
   background: #0D0D0D !important;
+  pointer-events: auto !important;
 }
 [data-testid="stSidebarHeader"] {
-  position: relative !important;
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 5 !important;
   min-height: 2.75rem !important;
+  display: flex !important;
+  justify-content: flex-end !important;
+  align-items: center !important;
+  background: #0D0D0D !important;
+  pointer-events: auto !important;
 }
-/* Collapse control: pin top-right of open sidebar, above everything in it */
-section[data-testid="stSidebar"][data-collapsed="false"] [data-testid="stSidebarCollapseButton"] {
-  position: fixed !important;
-  top: 0.55rem !important;
-  left: 21.2rem !important;
-  right: auto !important;
-  z-index: 100003 !important;
+/* Collapse control stays in-header (no fixed offset that misses the icon) */
+section[data-testid="stSidebar"][data-collapsed="false"] [data-testid="stSidebarCollapseButton"],
+section[data-testid="stSidebar"][data-collapsed="false"] [data-testid="stSidebarCollapseButton"] * {
+  position: relative !important;
+  z-index: 6 !important;
   display: flex !important;
   visibility: visible !important;
   pointer-events: auto !important;
+  cursor: pointer !important;
 }
 /* Expand control: top-left only when sidebar is closed.
    Never force it visible while open — that blocked the collapse click. */
