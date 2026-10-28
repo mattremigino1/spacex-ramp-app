@@ -53,96 +53,19 @@ header[data-testid="stHeader"] #MainMenu {
 header[data-testid="stHeader"] #MainMenu button {
   pointer-events: auto !important;
 }
-/* Overlay sidebar out of flex flow so main content never shifts.
-   Streamlit 1.66+ uses data-collapsed on the section. */
-section[data-testid="stSidebar"] {
-  position: fixed !important;
-  top: 0 !important;
-  left: 0 !important;
-  height: 100vh !important;
+/* Header ignores clicks (see above), so re-enable the open-sidebar control */
+[data-testid="stExpandSidebarButton"], [data-testid="stExpandSidebarButton"] * {
+  pointer-events: auto !important;
+}
+/* Sidebar sits beside the page (pushes content over); fixed width so the scenario dropdown fits */
+section[data-testid="stSidebar"][aria-expanded="true"],
+section[data-testid="stSidebar"][data-collapsed="false"] {
   width: 24rem !important;
   min-width: 24rem !important;
   max-width: 24rem !important;
-  z-index: 100000 !important;
-  transition: transform 0.2s ease, visibility 0.2s ease !important;
-  pointer-events: auto !important;
-}
-section[data-testid="stSidebar"][data-collapsed="false"] {
-  transform: none !important;
-  visibility: visible !important;
-  pointer-events: auto !important;
-}
-section[data-testid="stSidebar"][data-collapsed="true"] {
-  transform: translateX(-100%) !important;
-  visibility: hidden !important;
-  pointer-events: none !important;
-}
-/* Width is fixed — hide resize handle so it cannot cover the collapse click */
-[data-testid="stSidebarResizeHandle"] {
-  display: none !important;
-  pointer-events: none !important;
-}
-section[data-testid="stSidebar"] [data-testid="stSidebarContent"] {
-  height: 100vh !important;
-  max-height: 100vh !important;
-  overflow-y: auto !important;
-  overflow-x: hidden !important;
-  background: #0D0D0D !important;
-  pointer-events: auto !important;
-}
-[data-testid="stSidebarHeader"] {
-  position: sticky !important;
-  top: 0 !important;
-  z-index: 5 !important;
-  min-height: 2.75rem !important;
-  display: flex !important;
-  justify-content: flex-end !important;
-  align-items: center !important;
-  background: #0D0D0D !important;
-  pointer-events: auto !important;
-}
-/* Collapse control stays in-header (no fixed offset that misses the icon) */
-section[data-testid="stSidebar"][data-collapsed="false"] [data-testid="stSidebarCollapseButton"],
-section[data-testid="stSidebar"][data-collapsed="false"] [data-testid="stSidebarCollapseButton"] * {
-  position: relative !important;
-  z-index: 6 !important;
-  display: flex !important;
-  visibility: visible !important;
-  pointer-events: auto !important;
-  cursor: pointer !important;
-}
-/* Expand control: top-left only when sidebar is closed.
-   Never force it visible while open — that blocked the collapse click. */
-[data-testid="stExpandSidebarButton"] {
-  position: fixed !important;
-  left: 0.4rem !important;
-  top: 0.55rem !important;
-  z-index: 100002 !important;
-}
-body:has(section[data-testid="stSidebar"][data-collapsed="false"]) [data-testid="stExpandSidebarButton"] {
-  display: none !important;
-  visibility: hidden !important;
-  pointer-events: none !important;
-}
-body:has(section[data-testid="stSidebar"][data-collapsed="true"]) [data-testid="stExpandSidebarButton"] {
-  display: block !important;
-  visibility: visible !important;
-  pointer-events: auto !important;
-}
-/* Don't push main content aside for the sidebar */
-section.main,
-div[data-testid="stAppViewContainer"] > section.main,
-main#stMain,
-.stMain,
-div[data-testid="stAppViewContainer"] {
-  margin-left: 0 !important;
-  width: 100% !important;
-  max-width: 100% !important;
-  flex: 1 1 100% !important;
 }
 div[data-testid="stMainBlockContainer"], .block-container {
   max-width: 100% !important;
-  width: 100% !important;
   padding-left: 2.5rem !important;
   padding-right: 2.5rem !important;
 }
@@ -642,6 +565,9 @@ with tab_plan:
             if sum(vals) > 1e-6:
                 fig.add_bar(x=YEARS, y=vals, name=lab, marker_color=col, text=texts, textposition="inside",
                             insidetextfont=dict(color="#000000" if col in (WHITE, G1) else WHITE))
+        if not rel_gap:
+            fig.add_scatter(x=YEARS, y=[x * mf for x in T], name="Target", mode="markers",
+                            marker=dict(symbol="line-ew", size=40, line=dict(width=3, color=G2)))
         fig.update_layout(barmode="stack", yaxis_title=("% of target" if rel_gap else unit_gw))
         fig = style_fig(fig, 400)
         if rel_gap:
