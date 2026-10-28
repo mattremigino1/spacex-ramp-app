@@ -228,7 +228,6 @@ with tab_data:
             b["a"], b["b"], b["ai"] = float(be.loc[b["name"], "Helios-A"]), float(be.loc[b["name"], "Helios-B"]), bool(be.loc[b["name"], "AI-related"])
     with st.expander("Costs and value"):
         c = inp["costs"]
-        st.caption("The case has no cost data: these are added assumptions with public-source ranges (see the Excel model notes).")
         fields = [("launch_capex", "New launch capacity, $M per extra flight/yr", 1.0), ("ops", "Operating cost per flight, $M", 1.0),
                   ("fab_capex", "Solar fab capex, $M per GW/yr", 10.0), ("cells", "Solar cell production cost, $M per GW", 10.0),
                   ("orion", "Orion chip production cost, $M per chip", 0.0005), ("vega", "Vega chip price, $M per chip", 0.005),
