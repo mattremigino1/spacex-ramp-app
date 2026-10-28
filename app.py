@@ -323,17 +323,21 @@ def compute(inp_json):
     sol = sol_opt if str(inp["toggles"]["mix"]).strip() == "Optimized" else sol_cust
     R = run(inp, sol)
     variants = {}
+    # Table rows match the scenario dropdown; Optimized (constrained) = solver plan
     for name, mod in (("Unconstrained", dict(launch_on=0, solar_on=0, chips_on=0, apply_solver=0)),
                       ("Base case (constrained)", dict(mix="Custom", apply_solver=0)),
-                      ("Optimized (constrained)", dict(mix="Optimized", apply_solver=0)),
-                      ("Recommended plan", dict(apply_solver=1))):
+                      ("Optimized (constrained)", dict(apply_solver=1))):
         v = copy.deepcopy(inp); v["toggles"].update(mod)
         variants[name] = run(v, sol)
-    return sol, R, variants, sol_opt, sol_cust
+    # Mix-only optimized run (no additions) for recommendation card 1 GW delta — not shown in the table
+    v_opt_mix = copy.deepcopy(inp)
+    v_opt_mix["toggles"].update(dict(mix="Optimized", apply_solver=0))
+    opt_mix_R = run(v_opt_mix, sol)
+    return sol, R, variants, sol_opt, sol_cust, opt_mix_R
 
 
 try:
-    sol, R, VAR, sol_opt, sol_cust = compute(json.dumps(inp, sort_keys=True))
+    sol, R, VAR, sol_opt, sol_cust, opt_mix_R = compute(json.dumps(inp, sort_keys=True))
 except Exception as ex:   # bad input (e.g., a zero payload)
     st.error(f"The model could not run with these inputs: {ex}")
     st.stop()
@@ -637,7 +641,7 @@ with tab_plan:
     st.markdown("<span class='muted'>Optimization maximizes economic value by determining how much launch and solar capacity needs to be added given targets and orbital + satellite mix requirements.</span>", unsafe_allow_html=True)
     c = inp["costs"]
     recs = []
-    opt_cum = sum(VAR["Optimized (constrained)"]["realized"]); seed_cum = sum(VAR["Base case (constrained)"]["realized"])
+    opt_cum = sum(opt_mix_R["realized"]); seed_cum = sum(VAR["Base case (constrained)"]["realized"])
     x_mix = opt_cum - seed_cum
     if inp["toggles"]["mix"] == "Optimized":
         recs.append(("Optimize class and orbit mix", f"+{x_mix:,.1f} GW 2028-33 vs. the seed mix, at no cost", "Now"))
@@ -677,8 +681,8 @@ with tab_plan:
                            "Solar used (GW)": sum(Rv["solar_used"]), "Orion chips (M)": sum(Rv["orion_used"]) / 1e6, "Vega chips (M)": sum(Rv["vega_used"]) / 1e6}
     cdf = pd.DataFrame(comp_rows).T
     cdf.loc["Unconstrained", "% of target"] = "100%"
-    st.markdown("**Cases side by side**")
-    st.dataframe(cdf.map(lambda v: fmt(v, 1) if isinstance(v, (int, float)) and not isinstance(v, bool) else v), use_container_width=True)
+    st.markdown("**Scenario comparison**")
+    st.dataframe(cdf.map(fmt_cell), use_container_width=True)
 
     # ----------------------------------------------------------------------------------------------- 7. economics
     st.markdown("## 7. Costs and value of the recommended plan (illustrative)")
