@@ -43,13 +43,33 @@ div[data-testid="stToolbar"] {
   max-width: fit-content !important;
   background: transparent !important;
 }
-/* Wider sidebar + don't clip the scenario dropdown menu */
+/* Overlay sidebar: main content stays full-width underneath */
 section[data-testid="stSidebar"] {
+  position: fixed !important;
+  left: 0 !important;
+  top: 0 !important;
+  height: 100vh !important;
+  z-index: 100000 !important;
   width: 24rem !important;
   min-width: 24rem !important;
+  transform: none !important;
 }
 section[data-testid="stSidebar"] > div { overflow: visible !important; }
-section[data-testid="stSidebar"] [data-testid="stSidebarContent"] { overflow: visible !important; }
+section[data-testid="stSidebar"] [data-testid="stSidebarContent"] {
+  overflow: visible !important;
+  background: #0D0D0D !important;
+}
+/* Don't push main content aside for the sidebar */
+section.main, div[data-testid="stAppViewContainer"] > section.main,
+div[data-testid="stAppViewContainer"] {
+  margin-left: 0 !important;
+}
+div[data-testid="stMainBlockContainer"], .block-container {
+  max-width: 100% !important;
+  width: 100% !important;
+  padding-left: 2.5rem !important;
+  padding-right: 2.5rem !important;
+}
 div[data-baseweb="popover"], div[data-baseweb="menu"], [data-testid="stSelectboxVirtualDropdown"],
 ul[role="listbox"], div.st-key-preset_box [role="listbox"] {
   z-index: 1000000 !important;
