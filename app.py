@@ -332,50 +332,144 @@ with tab_plan:
         st.download_button("Download CSV", df.to_csv().encode(), "ramp.csv", key="dl1")
 
     # ----------------------------------------------------------------------------------------------- 2. what binds
-    st.markdown("## 2. What binds: utilization of each limit")
-    mode = st.radio("Show", ["Used in the selected case ÷ available", "Needed to hit the target ÷ available"], horizontal=True, key="heatmode")
-    need = mode.startswith("Needed")
-    avail = {"SSO flights": R["sso_avail"], "LEO flights": R["leo_avail"], "Solar": R["solar_supply"], "Orion chips": R["orion_tot"], "Vega chips": R["vega_tot"]}
-    used = {"SSO flights": R["flights_sso"], "LEO flights": R["flights_leo"], "Solar": R["solar_used"], "Orion chips": R["orion_used"], "Vega chips": R["vega_used"]}
-    needed = {"SSO flights": U["flights_sso"], "LEO flights": U["flights_leo"], "Solar": U["solar"], "Orion chips": U["orion"], "Vega chips": U["vega"]}
-    bindmap = {"SSO flights": 0, "LEO flights": 1, "Solar": 2, "Orion chips": 3, "Vega chips": 3}
-    rowsn = list(avail)
-    z, txt, isb = [], [], []
-    for r in rowsn:
-        zr, tr, br = [], [], []
-        for j in range(6):
-            a = avail[r][j]; num = (needed if need else used)[r][j]
-            u = None if a == 0 else num / a
-            zr.append(None if u is None else min(u, 1.5) if need else u); tr.append("n/a" if u is None else f"{u:.0%}")
-            b = R["binds_flags"][j][bindmap[r]] == 1 and not need and (r != "Vega chips" or R["vega_used"][j] > 0) and (r != "Orion chips" or R["orion_used"][j] > 0)
-            br.append(b)
-        z.append(zr); txt.append(tr); isb.append(br)
-    fig = go.Figure(go.Heatmap(z=z, x=[str(y) for y in YEARS], y=rowsn, text=txt, texttemplate="%{text}", textfont=dict(size=14, color=WHITE),
-                               colorscale=[[0, "#111111"], [0.5, "#3A3A3A"], [0.66, "#5A5A5A"], [1, ACC]], zmin=0, zmax=1.5 if need else 1, showscale=False, xgap=3, ygap=3,
-                               hovertemplate="%{y}, %{x}: %{text}<extra></extra>"))
-    for i, r in enumerate(rowsn):
-        for j in range(6):
-            if isb[i][j]:
-                fig.add_shape(type="rect", x0=j - 0.5, x1=j + 0.5, y0=i - 0.5, y1=i + 0.5, line=dict(color=WHITE, width=3))
-    fig.update_yaxes(autorange="reversed", showgrid=False)
-    st.plotly_chart(style_fig(fig, 300, legend=False), use_container_width=True)
-    st.caption("White outline = the limit holding compute back that year. " + ("Values above 100% mean the target needs more than is available (capped at 150% for color)." if need else "Blue = fully used."))
-    pick = st.segmented_control("Drill into a limit", rowsn, key="drill")
-    if pick:
-        unit = {"SSO flights": "flights", "LEO flights": "flights", "Solar": "GW", "Orion chips": "chips", "Vega chips": "chips"}[pick]
-        f = mf if True else 1
-        dd = pd.DataFrame({"Available (incl. carry-forward)": [avail[pick][j] * f for j in range(6)], "Used, selected case": [used[pick][j] * f for j in range(6)],
-                           "Needed to hit the target (unconstrained)": [needed[pick][j] * f for j in range(6)]}, index=YEARS).T
-        if pick in ("SSO flights", "LEO flights"):
-            orb = pick.split()[0]
-            for i in range(4):
-                if cls[i]["orbit"] == orb:
-                    kk = [R["k"][j][i] for j in range(6)]
-                    dd.loc[f"  of which {cls[i]['id']} (selected case)"] = [0 if R['sats'][j][i] == 0 else -(-R['sats'][j][i] // kk[j]) * f for j in range(6)]
-        if pick == "Solar":
-            for i in range(4): dd.loc[f"  of which {cls[i]['id']} (selected case)"] = [R["sats"][j][i] * cls[i]["kw"] * R["derived"]["cls"][i]["P"] / 1e6 * f for j in range(6)]
-        st.markdown(f"**{pick}** ({unit}{' per month' if monthly else ' per year'})")
-        st.dataframe(dd.map(lambda v: fmt(v, 1)), use_container_width=True)
+    st.markdown("## 2. What binds")
+    tab_binds_today, tab_plan_needs = st.tabs(["What binds today", "What the plan needs"])
+
+    with tab_binds_today:
+        avail = {"SSO flights": R["sso_avail"], "LEO flights": R["leo_avail"], "Solar": R["solar_supply"], "Orion chips": R["orion_tot"], "Vega chips": R["vega_tot"]}
+        used = {"SSO flights": R["flights_sso"], "LEO flights": R["flights_leo"], "Solar": R["solar_used"], "Orion chips": R["orion_used"], "Vega chips": R["vega_used"]}
+        bindmap = {"SSO flights": 0, "LEO flights": 1, "Solar": 2, "Orion chips": 3, "Vega chips": 3}
+        rowsn = list(avail)
+        z, txt, isb = [], [], []
+        for r in rowsn:
+            zr, tr, br = [], [], []
+            for j in range(6):
+                a = avail[r][j]; num = used[r][j]
+                u = None if a == 0 else num / a
+                zr.append(None if u is None else u); tr.append("n/a" if u is None else f"{u:.0%}")
+                b = R["binds_flags"][j][bindmap[r]] == 1 and (r != "Vega chips" or R["vega_used"][j] > 0) and (r != "Orion chips" or R["orion_used"][j] > 0)
+                br.append(b)
+            z.append(zr); txt.append(tr); isb.append(br)
+        fig = go.Figure(go.Heatmap(z=z, x=[str(y) for y in YEARS], y=rowsn, text=txt, texttemplate="%{text}", textfont=dict(size=14, color=WHITE),
+                                   colorscale=[[0, "#111111"], [0.5, "#3A3A3A"], [0.66, "#5A5A5A"], [1, ACC]], zmin=0, zmax=1, showscale=False, xgap=3, ygap=3,
+                                   hovertemplate="%{y}, %{x}: %{text}<extra></extra>"))
+        for i, r in enumerate(rowsn):
+            for j in range(6):
+                if isb[i][j]:
+                    fig.add_shape(type="rect", x0=j - 0.5, x1=j + 0.5, y0=i - 0.5, y1=i + 0.5, line=dict(color=WHITE, width=3))
+        fig.update_yaxes(autorange="reversed", showgrid=False)
+        st.plotly_chart(style_fig(fig, 300, legend=False), use_container_width=True)
+        st.caption("Selected case: share of each resource used. White outline = the limit holding compute back that year.")
+        pick = st.segmented_control("Drill into a limit", rowsn, key="drill_today")
+        if pick:
+            unit = {"SSO flights": "flights", "LEO flights": "flights", "Solar": "GW", "Orion chips": "chips", "Vega chips": "chips"}[pick]
+            f = mf
+            dd = pd.DataFrame({"Available (incl. carry-forward)": [avail[pick][j] * f for j in range(6)],
+                               "Used, selected case": [used[pick][j] * f for j in range(6)]}, index=YEARS).T
+            if pick in ("SSO flights", "LEO flights"):
+                orb = pick.split()[0]
+                for i in range(4):
+                    if cls[i]["orbit"] == orb:
+                        kk = [R["k"][j][i] for j in range(6)]
+                        dd.loc[f"  of which {cls[i]['id']} (selected case)"] = [0 if R['sats'][j][i] == 0 else -(-R['sats'][j][i] // kk[j]) * f for j in range(6)]
+            if pick == "Solar":
+                for i in range(4): dd.loc[f"  of which {cls[i]['id']} (selected case)"] = [R["sats"][j][i] * cls[i]["kw"] * R["derived"]["cls"][i]["P"] / 1e6 * f for j in range(6)]
+            st.markdown(f"**{pick}** ({unit}{' per month' if monthly else ' per year'})")
+            st.dataframe(dd.map(lambda v: fmt(v, 1)), use_container_width=True)
+
+    with tab_plan_needs:
+        Wo = inp["chips"][0]["tdp"] * inp["chips"][0]["util"]
+        Wv = inp["chips"][1]["tdp"] * inp["chips"][1]["util"]
+        case_sso, case_leo, case_sol = inp["flights_sso"], inp["flights_leo"], inp["solar"]
+        plan_sso, plan_leo, plan_sol = sol["flights_sso"], sol["flights_leo"], sol["solar_used"]
+        case_chip_w = [inp["orion"][j] * Wo + inp["vega"][j] * Wv for j in range(6)]
+        plan_chip_w = [sol["orion_used"][j] * 1e6 * Wo + sol["vega_used"][j] * 1e6 * Wv for j in range(6)]
+
+        def _ratio(num, den):
+            return None if den == 0 else num / den
+
+        ratios = {
+            "SSO flights": [_ratio(plan_sso[j], case_sso[j]) for j in range(6)],
+            "LEO flights": [_ratio(plan_leo[j], case_leo[j]) for j in range(6)],
+            "Solar": [_ratio(plan_sol[j], case_sol[j]) for j in range(6)],
+            "AI chips (effective watts)": [_ratio(plan_chip_w[j], case_chip_w[j]) for j in range(6)],
+        }
+        tg = inp["toggles"]
+        row_labels = []
+        for r in ratios:
+            lab = r
+            if r in ("SSO flights", "LEO flights") and tg.get("launch_on", 1) == 0: lab += " (limit off)"
+            if r == "Solar" and tg.get("solar_on", 1) == 0: lab += " (limit off)"
+            if r.startswith("AI chips") and tg.get("chips_on", 1) == 0: lab += " (limit off)"
+            row_labels.append(lab)
+        row_keys = list(ratios)
+        z2, txt2, outline2 = [], [], []
+        for r in row_keys:
+            zr, tr, br = [], [], []
+            for j in range(6):
+                u = ratios[r][j]
+                zr.append(None if u is None else min(u, 1.5))
+                tr.append("n/a" if u is None else f"{u:.0%}")
+                chip_out = r.startswith("AI chips") and u is not None and u >= 0.995 and sol["shortfall"][j] > 0.01
+                br.append(chip_out)
+            z2.append(zr); txt2.append(tr); outline2.append(br)
+        fig2 = go.Figure(go.Heatmap(z=z2, x=[str(y) for y in YEARS], y=row_labels, text=txt2, texttemplate="%{text}", textfont=dict(size=14, color=WHITE),
+                                    colorscale=[[0, "#111111"], [0.5, "#3A3A3A"], [0.66, "#5A5A5A"], [1, ACC]], zmin=0, zmax=1.5, showscale=False, xgap=3, ygap=3,
+                                    hovertemplate="%{y}, %{x}: %{text}<extra></extra>"))
+        for i in range(len(row_keys)):
+            for j in range(6):
+                if outline2[i][j]:
+                    fig2.add_shape(type="rect", x0=j - 0.5, x1=j + 0.5, y0=i - 0.5, y1=i + 0.5, line=dict(color=WHITE, width=3))
+        fig2.update_yaxes(autorange="reversed", showgrid=False)
+        st.plotly_chart(style_fig(fig2, 300, legend=False), use_container_width=True)
+        st.caption("Recommended plan (Solver) for the current settings: resources used ÷ what the case provides. Above 100% = capacity to add. "
+                   "White outline = chip supply caps the plan that year. Above 100% on chips can happen when chips carried forward from earlier years are used. "
+                   "Built from the Solver's outputs; not a separate tab in the Excel model.")
+
+        # Plain-English read-out from the ratios
+        bits = []
+        for r, lab in zip(row_keys, row_labels):
+            vals = [(ratios[r][j], YEARS[j]) for j in range(6) if ratios[r][j] is not None]
+            if not vals:
+                continue
+            mx, ymx = max(vals, key=lambda t: t[0])
+            short = {"SSO flights": "SSO flights", "LEO flights": "LEO flights", "Solar": "solar",
+                     "AI chips (effective watts)": "chips"}[r]
+            if mx <= 1.005:
+                bits.append(f"{short} stays at the case level")
+            else:
+                bits.append(f"up to {mx:.1f}x the case's {short} ({ymx})")
+        cy = [YEARS[j] for j in range(6) if outline2[row_keys.index("AI chips (effective watts)")][j]]
+        story = "Plan needs " + "; ".join(bits) + "."
+        if cy:
+            if len(cy) >= 2 and cy[-1] - cy[0] == len(cy) - 1:
+                chip_span = f"{cy[0]}-{str(cy[-1])[2:]}"
+            else:
+                chip_span = ", ".join(str(y) for y in cy)
+            story += f" Chips cap the plan in {chip_span}."
+        st.markdown(f"<p class='answer'>{story}</p>", unsafe_allow_html=True)
+
+        pick2 = st.segmented_control("Drill into a limit", row_labels, key="drill_plan")
+        if pick2:
+            rkey = row_keys[row_labels.index(pick2)]
+            f = mf
+            if rkey == "SSO flights":
+                supply, uses = case_sso, plan_sso; unit = "flights"
+            elif rkey == "LEO flights":
+                supply, uses = case_leo, plan_leo; unit = "flights"
+            elif rkey == "Solar":
+                supply, uses = case_sol, plan_sol; unit = "GW"
+            else:
+                supply = [w / 1e9 for w in case_chip_w]  # watts -> GW
+                uses = [w / 1e9 for w in plan_chip_w]
+                unit = "effective GW"
+            dd2 = pd.DataFrame({
+                "Case supply": [supply[j] * f for j in range(6)],
+                "Recommended plan uses": [uses[j] * f for j in range(6)],
+                "To add (plan − case, floor 0)": [max(0, uses[j] - supply[j]) * f for j in range(6)],
+            }, index=YEARS).T
+            st.markdown(f"**{pick2}** ({unit}{' per month' if monthly else ' per year'})")
+            st.dataframe(dd2.map(lambda v: fmt(v, 2 if unit.endswith("GW") else 1)), use_container_width=True)
 
     # ----------------------------------------------------------------------------------------------- 3. lever strength
     st.markdown("## 3. Which limit to relieve first")
