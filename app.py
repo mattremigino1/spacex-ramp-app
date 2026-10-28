@@ -241,7 +241,7 @@ with st.sidebar:
     t["solar_on"] = int(st.toggle("Solar limit", value=t["solar_on"] == 1, key=k("son")))
     t["chips_on"] = int(st.toggle("AI chip limit", value=t["chips_on"] == 1, key=k("con")))
     _mix = st.radio("Class and orbit mix", ["Optimized", "Fixed"], index=0 if t["mix"] == "Optimized" else 1, horizontal=True, key=k("mix"),
-                    help="Optimized lets the model and the Solver pick the class split that maximizes compute or minimizes cost. Custom fixes each year's split to the seed mix table (editable under Case data), for both the selected case and the Solver's recommended plan.")
+                    help="Optimized lets the model and the optimizer pick the class split that maximizes compute or minimizes cost. Fixed holds each year's split at the seed mix table (editable on the Data and assumptions tab), for both the selected case and the optimizer's plan.")
     t["mix"] = "Optimized" if _mix == "Optimized" else "Custom"
     t["apply_solver"] = int(st.toggle("Run optimizer", value=t.get("apply_solver", 0) == 1, key=k("apply"),
                                       help="Adds the launch capacity and solar fab the Solver recommends, then runs the plan in whole satellites."))
@@ -335,7 +335,7 @@ def compute(inp_json):
     variants = {}
     # Table rows match the scenario dropdown; Optimized (constrained) = solver plan
     for name, mod in (("Unconstrained", dict(launch_on=0, solar_on=0, chips_on=0, apply_solver=0)),
-                      ("Base case (constrained)", dict(mix="Custom", apply_solver=0)),
+                      ("Base case (constrained)", dict(apply_solver=0)),
                       ("Optimized (constrained)", dict(apply_solver=1))):
         v = copy.deepcopy(inp); v["toggles"].update(mod)
         variants[name] = run(v, sol)
@@ -352,7 +352,8 @@ def compute(inp_json):
                 "worth_B": blocked["objective"] - sol["objective"],
                 "gw_lost": sum(sol["compute"]) - sum(blocked["compute"]),
             }
-    gw_mix = sum(opt_mix_R["realized"]) - sum(variants["Base case (constrained)"]["realized"])
+    v_seed = copy.deepcopy(inp); v_seed["toggles"].update(dict(mix="Custom", apply_solver=0))
+    gw_mix = sum(opt_mix_R["realized"]) - sum(run(v_seed, sol)["realized"])
     action_vals["mix"] = {
         "worth_B": sol_opt["pv"]["npv"] - sol_cust["pv"]["npv"],
         "gw": gw_mix,
@@ -401,7 +402,7 @@ with tab_plan:
         return "; ".join(f"{p[0]} {p[1]}" + (f"-{str(p[2])[2:]}" if p[2] != p[1] else "") for p in parts)
 
 
-    st.markdown(f"<div class='answer'><b>{case_name()}:</b> delivers <b>{cum_r:,.1f} GW</b> of the {cum_t:,.0f} GW 2028-33 target "
+    st.markdown(f"<div class='answer'><b>{case_name()}:</b> delivers <b>{cum_r:,.1f} GW</b> of the {cum_t:,.1f} GW 2028-33 target "
                 f"(<b>{cum_r / cum_t:.0%}</b>).<br>What binds: {binds_story()}.<br>"
                 f"<span class='muted'>The recommended plan (most economic added launch capacity and solar fab) reaches {sum(sol['compute']):,.1f} GW "
                 f"({sum(sol['compute']) / cum_t:.0%}); see the recommendation section.</span></div>", unsafe_allow_html=True)
@@ -641,9 +642,6 @@ with tab_plan:
             if sum(vals) > 1e-6:
                 fig.add_bar(x=YEARS, y=vals, name=lab, marker_color=col, text=texts, textposition="inside",
                             insidetextfont=dict(color="#000000" if col in (WHITE, G1) else WHITE))
-        if not rel_gap:
-            fig.add_scatter(x=YEARS, y=[x * mf for x in T], name="Target", mode="markers",
-                            marker=dict(symbol="line-ew", size=40, line=dict(width=3, color=G2)))
         fig.update_layout(barmode="stack", yaxis_title=("% of target" if rel_gap else unit_gw))
         fig = style_fig(fig, 400)
         if rel_gap:
@@ -788,7 +786,7 @@ with tab_plan:
 
     # ----------------------------------------------------------------------------------------------- 7. economics
     st.markdown("## 7. Economics of the selected case (illustrative)")
-    st.markdown("<span class='muted'>Cost inputs and the $15/W/yr contribution are added assumptions; the case data has no costs. Present values in 2028 dollars at the discount rate. "
+    st.markdown(f"<span class='muted'>Cost inputs and the ${inp['costs']['contribution']:g}/W/yr contribution are added assumptions; the case data has no costs. Present values in 2028 dollars at the discount rate. "
                 "Pre-tax; capacity left after 2033 gets no value.</span>", unsafe_allow_html=True)
     econ = selected_case_economics(inp, R, sol)
     if not econ["meaningful"]:
@@ -841,5 +839,6 @@ with tab_plan:
         ddf = pd.DataFrame(dr, index=YEARS).T
         if not monthly:
             ddf["2028-2033"] = ddf.sum(axis=1)
+            ddf.loc["Compute in orbit, end of year (GW)", "2028-2033"] = R["fleet_compute"][-1]
         st.dataframe(ddf.map(lambda v: fmt(v, 2)), use_container_width=True)
         st.download_button("Download CSV", ddf.to_csv().encode(), "plan.csv", key="dl8")

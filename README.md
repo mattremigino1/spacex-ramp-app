@@ -31,7 +31,7 @@ Opens at http://localhost:8501. No internet needed once the packages are install
 | 7. Economics of the selected case | Economics of the selected case: value, cost, indicative NPV, and how much the recommended plan adds (illustrative: costs are added assumptions) |
 | 8. Detailed plan | Year-by-year table with CSV download |
 
-The sidebar holds scenario presets (base, unconstrained, seed mix, recommended plan, six risk cases), all toggles, and every case input in editable tables.
+The sidebar holds three scenario presets (Base case, Optimized, Unconstrained) and all toggles. Every case input and cost assumption is editable on the Data and assumptions tab. Six risk presets remain in `model/scenarios.py` (`RISK_PRESETS`) but are not in the dropdown.
 
 ## Files
 
