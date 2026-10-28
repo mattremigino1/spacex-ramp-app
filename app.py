@@ -349,7 +349,7 @@ with tab_plan:
         st.download_button("Download CSV", df.to_csv().encode(), "ramp.csv", key="dl1")
 
     # ----------------------------------------------------------------------------------------------- 2. what binds
-    st.markdown("## 2. Utilization of each limit")
+    st.markdown("## 2. Utilization of each constraint")
     tab_binds_today, tab_plan_needs = st.tabs(["What binds today", "What is needed"])
 
     with tab_binds_today:

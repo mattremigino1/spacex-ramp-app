@@ -23,7 +23,7 @@ Opens at http://localhost:8501. No internet needed once the packages are install
 |---|---|
 | Headline | Selected case vs. target, what binds by year, big numbers (per-month averages when monthly is on) |
 | 1. Compute vs. target | Annual or cumulative; total, by orbit, generation, or class |
-| 2. What binds | Heat map, two tabs: what binds in the selected case today, and what the recommended plan needs vs. case supply; drill into any row for units |
+| 2. Utilization of each constraint | Heat map, two tabs: what binds in the selected case today, and what the recommended plan needs vs. case supply; drill into any row for units |
 | 3. Which limit to relieve first | Share of the next unit of compute each limit would unlock |
 | 4. Satellites by class | Number or compute, annual or cumulative |
 | 5. Closing the gap | Gap split into mix, flights alone, solar alone, flights + solar together, chips |
