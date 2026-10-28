@@ -299,11 +299,19 @@ cum_t, cum_r = sum(T), sum(real)
 
 
 def case_name():
-    tg = inp["toggles"]
-    if tg["launch_on"] == 0 and tg["solar_on"] == 0 and tg["chips_on"] == 0 and tg.get("apply_solver", 0) == 0: return "Unconstrained"
-    nm = "Constrained, " + ("optimized mix" if tg["mix"] == "Optimized" else "seed mix")
-    if tg.get("apply_solver", 0) == 1: nm += " + Solver additions"
-    return nm
+    """Selected scenario from the dropdown; '(edited)' if the inputs no longer match that preset."""
+    preset = st.session_state.preset
+    def norm(x):
+        if isinstance(x, bool): return x
+        if isinstance(x, (int, float)): return round(float(x), 9)
+        if isinstance(x, dict): return {k_: norm(v) for k_, v in x.items()}
+        if isinstance(x, list): return [norm(v) for v in x]
+        return x
+    try:
+        same = norm(scenarios.apply(preset, DEFAULTS)) == norm(inp)
+    except Exception:
+        same = True
+    return preset if same else f"{preset} (edited)"
 
 
 with tab_plan:
@@ -405,6 +413,8 @@ with tab_plan:
         fig.update_yaxes(autorange="reversed", showgrid=False)
         st.plotly_chart(style_fig(fig, 300, legend=False), use_container_width=True)
         st.caption("Selected case: share of each resource used. White outline = the limit holding compute back that year.")
+        with st.expander("Show the numbers"):
+            st.dataframe(pd.DataFrame(txt, index=rowsn, columns=YEARS), use_container_width=True)
         pick = st.segmented_control("Drill into a limit", rowsn, key="drill_today")
         if pick:
             unit = {"SSO flights": "flights", "LEO flights": "flights", "Solar": "GW", "Orion chips": "chips", "Vega chips": "chips"}[pick]
@@ -468,6 +478,8 @@ with tab_plan:
         fig2.update_yaxes(autorange="reversed", showgrid=False)
         st.plotly_chart(style_fig(fig2, 300, legend=False), use_container_width=True)
         st.caption("Amount of current planned resource required to achieve optimal plan. White outline = limit holding compute back.")
+        with st.expander("Show the numbers"):
+            st.dataframe(pd.DataFrame(txt2, index=row_labels, columns=YEARS), use_container_width=True)
 
         # Plain-English read-out from the ratios
         bits = []
@@ -514,8 +526,46 @@ with tab_plan:
             st.markdown(f"**{pick2}** ({unit}{' per month' if monthly else ' per year'})")
             st.dataframe(dd2.map(lambda v: fmt(v, 2 if unit.endswith("GW") else 1)), use_container_width=True)
 
-    # ----------------------------------------------------------------------------------------------- 3. lever strength
-    st.markdown("## 3. Annual bottlenecks")
+    # ----------------------------------------------------------------------------------------------- 3. units needed
+    st.markdown("## 3. Resources needed to reach the optimized case")
+    OPT = VAR["Optimized (constrained)"]
+    res_opts = {
+        "SSO flights": ("flights", lambda Rx: Rx["flights_sso"], 1),
+        "LEO flights": ("flights", lambda Rx: Rx["flights_leo"], 1),
+        "Solar": ("GW", lambda Rx: Rx["solar_used"], 1),
+        "Orion chips": ("M chips", lambda Rx: Rx["orion_used"], 1e-6),
+        "Vega chips": ("M chips", lambda Rx: Rx["vega_used"], 1e-6),
+    }
+    uc1, uc2 = st.columns([5.5, 1])
+    with uc2:
+        res_pick = st.radio("Resource", list(res_opts), key="res_pick")
+    unit_r, getter, scale = res_opts[res_pick]
+    sel_v = [getter(R)[j] * scale * mf for j in range(6)]
+    opt_v = [getter(OPT)[j] * scale * mf for j in range(6)]
+    dp = 2 if unit_r != "flights" else 0
+    with uc1:
+        fig = go.Figure()
+        fig.add_bar(x=YEARS, y=sel_v, name=f"Selected case ({case_name()})", marker_color=G1,
+                    text=[f"{v:,.{dp}f}" for v in sel_v], textposition="outside", textfont=dict(color=G1))
+        fig.add_bar(x=YEARS, y=opt_v, name="Optimized (constrained)", marker_color=ACC,
+                    text=[f"{v:,.{dp}f}" for v in opt_v], textposition="outside", textfont=dict(color=ACC))
+        fig.update_layout(barmode="group", bargap=0.25, bargroupgap=0.05,
+                          yaxis_title=f"{unit_r} / {'month' if monthly else 'year'}")
+        fig = style_fig(fig, 380)
+        fig.update_layout(uniformtext_mode=False)
+        st.plotly_chart(fig, use_container_width=True)
+    st.caption("Units of the chosen resource used each year by the selected case and by the optimized case (the selected settings plus the optimizer's added launch capacity and solar fab, run in whole satellites).")
+    with st.expander("Show the numbers"):
+        udf = pd.DataFrame({"Selected case": sel_v, "Optimized (constrained)": opt_v,
+                            "Additional needed (optimized − selected)": [o - s_ for o, s_ in zip(opt_v, sel_v)]}, index=YEARS).T
+        if not monthly:
+            udf["2028-33"] = udf.sum(axis=1)
+        st.markdown(f"**{res_pick}** ({unit_r}{' per month' if monthly else ' per year'})")
+        st.dataframe(udf.map(lambda v: f"{v:,.{dp}f}"), use_container_width=True)
+        st.download_button("Download CSV", udf.to_csv().encode(), "resources.csv", key="dl3")
+
+    # ----------------------------------------------------------------------------------------------- 4. lever strength
+    st.markdown("## 4. Annual bottlenecks")
     lev = R["lever"]; labels = ["SSO flights", "LEO flights", "Solar", "Chips"]; lc = [WHITE, ACC, G1, G3]
     fig = go.Figure()
     for i, l in enumerate(labels):
@@ -527,9 +577,13 @@ with tab_plan:
         st.caption("Share of the next unit of compute each limit would unlock (marginal view). A year at 0% everywhere has met its target.")
     else:
         st.caption("Fixed mix: compute is set by the tightest limit, so it gets 100% (split equally if tied); relieving any other limit adds nothing. A year at 0% everywhere has met its target.")
+    with st.expander("Show the numbers"):
+        ldf = pd.DataFrame({l: [f"{lev[j][i]:.0%}" for j in range(6)] for i, l in enumerate(labels)}, index=YEARS).T
+        ldf.loc["What binds"] = R["binds"]
+        st.dataframe(ldf, use_container_width=True)
 
     # ----------------------------------------------------------------------------------------------- 4. satellites
-    st.markdown("## 4. Satellites launched by class")
+    st.markdown("## 5. Satellites launched by class")
     cc1, cc2 = st.columns([5.5, 1])
     with cc2:
         measure = st.radio("Measure", ["Number of satellites", "Compute (GW)"], key="satm")
@@ -544,9 +598,16 @@ with tab_plan:
                         insidetextfont=dict(color="#000000" if CLASS_COL[cls[i]["id"]] in (WHITE, G1, ACC2) else WHITE))
         fig.update_layout(barmode="stack")
         st.plotly_chart(style_fig(fig, 360), use_container_width=True)
+    with st.expander("Show the numbers"):
+        sdf = pd.DataFrame({cls[i]["id"]: ([sum((R["sats"][jj][i] if measure.startswith("Number") else R["comp_cls"][jj][i]) for jj in range(j + 1)) for j in range(6)] if cum4
+                                            else [(R["sats"][j][i] if measure.startswith("Number") else R["comp_cls"][j][i]) * mf for j in range(6)]) for i in range(4)}, index=YEARS).T
+        sdf.loc["Total"] = sdf.sum(axis=0)
+        if not monthly and not cum4:
+            sdf["2028-33"] = sdf.sum(axis=1)
+        st.dataframe(sdf.map(lambda v: f"{v:,.0f}" if measure.startswith("Number") else f"{v:,.2f}"), use_container_width=True)
 
     # ----------------------------------------------------------------------------------------------- 5. closing the gap
-    st.markdown("## 5. Constrained compute by resource")
+    st.markdown("## 6. Constrained compute by resource")
     gp = R["gap_parts"]
     parts = [("Orbit and satellite mix", "mix", G2), ("Flights alone", "flights", WHITE), ("Solar alone", "solar", G1), ("Flights and solar together", "together", ACC), ("Chips", "chips", G3)]
     gc1, gc2 = st.columns([5.5, 1])
@@ -585,7 +646,7 @@ with tab_plan:
             st.dataframe(gdf.map(lambda v: fmt(v, 2)), use_container_width=True)
 
     # ----------------------------------------------------------------------------------------------- 6. recommendation
-    st.markdown("## 6. Recommended plan and scenario comparison")
+    st.markdown("## 7. Recommended plan and scenario comparison")
     st.markdown("<span class='muted'>Optimization maximizes economic value by determining how much launch and solar capacity needs to be added given targets and orbital + satellite mix requirements.</span>", unsafe_allow_html=True)
     c = inp["costs"]
 
@@ -711,9 +772,7 @@ with tab_plan:
     st.dataframe(cdf.map(fmt_cell), use_container_width=True)
 
     # ----------------------------------------------------------------------------------------------- 7. economics
-    st.markdown("## 7. Economics of the selected case (illustrative)")
-    st.markdown(f"<span class='muted'>Cost inputs and the ${inp['costs']['contribution']:g}/W/yr contribution are added assumptions; the case data has no costs. Present values in 2028 dollars at the discount rate. "
-                "Pre-tax; capacity left after 2033 gets no value.</span>", unsafe_allow_html=True)
+    st.markdown("## 8. Economics of the selected case")
     econ = selected_case_economics(inp, R, sol)
     if not econ["meaningful"]:
         st.info("Economics not shown: with a limit switched off, that resource is treated as unlimited and free, so costs and NPV are not meaningful. Turn the limits back on to see the economics.")
@@ -752,7 +811,7 @@ with tab_plan:
             st.download_button("Download CSV", edf.to_csv().encode(), "economics.csv", key="dl7")
 
     # ----------------------------------------------------------------------------------------------- 8. detail
-    st.markdown("## 8. Detailed plan")
+    st.markdown("## 9. Detailed plan")
     with st.expander("Selected scenario by year", expanded=False):
         dr = {}
         dr["Compute launched (GW)"] = [x * mf for x in real]
