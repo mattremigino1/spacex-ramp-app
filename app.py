@@ -190,12 +190,12 @@ with st.sidebar:
     t["solar_on"] = int(st.toggle("Solar limit", value=t["solar_on"] == 1, key=k("son")))
     tag("S-chip-limit")
     t["chips_on"] = int(st.toggle("AI chip limit", value=t["chips_on"] == 1, key=k("con")))
-
-    st.markdown("### Operations")
     tag("S-mix")
     _mix = st.radio("Class and orbit mix", ["Flexible/optimized", "Fixed"], index=0 if t["mix"] == "Optimized" else 1, horizontal=True, key=k("mix"),
                     help="Flexible/optimized lets the model and the optimizer pick the class split that maximizes compute or minimizes cost. Fixed holds each year's split at the seed mix table (editable on the Data and assumptions tab), for both the selected case and the optimizer's plan.")
     t["mix"] = "Optimized" if _mix == "Flexible/optimized" else "Custom"
+
+    st.markdown("### Operations")
     tag("S-eol")
     t["eol_sizing"] = int(st.toggle("Size solar for end of life", value=t["eol_sizing"] == 1, key=k("eol")))
     tag("S-chip-carry")
@@ -342,37 +342,8 @@ cum_t, cum_r = sum(T), sum(real)
 
 
 def case_name():
-    """Headline name: the dropdown scenario, adjusted for the limit toggles.
-
-    All three limits off -> "Unconstrained"; some off -> "<scenario>, <x> limit off".
-    "(edited)" if any other input differs from the scenario (Run optimizer and limit toggles don't count).
-    """
-    preset = st.session_state.preset
-    tg = inp["toggles"]
-    off = [lab for key_, lab in (("launch_on", "flight"), ("solar_on", "solar"), ("chips_on", "chip")) if tg.get(key_, 1) != 1]
-    def norm(x):
-        if isinstance(x, bool): return x
-        if isinstance(x, (int, float)): return round(float(x), 9)
-        if isinstance(x, dict): return {k_: norm(v) for k_, v in x.items()}
-        if isinstance(x, list): return [norm(v) for v in x]
-        return x
-    try:
-        ref, cur = norm(scenarios.apply(preset, DEFAULTS)), norm(inp)
-        ignore = ["apply_solver", "launch_on", "solar_on", "chips_on"]
-        if len(off) == 3:   # with every limit off, the mix doesn't change the answer
-            ignore.append("mix")
-        for key_ in ignore:
-            ref["toggles"].pop(key_, None); cur["toggles"].pop(key_, None)
-        same = ref == cur
-    except Exception:
-        same = True
-    if len(off) == 3:
-        name = "Unconstrained"
-    elif off:
-        name = f"{preset}, {' and '.join(off)} limit{'s' if len(off) > 1 else ''} off"
-    else:
-        name = preset
-    return name if same else f"{name} (edited)"
+    """Headline name: always the scenario selected in the dropdown."""
+    return st.session_state.preset
 
 with tab_plan:
     # ----------------------------------------------------------------------------------------------- header + answer
@@ -451,7 +422,7 @@ with tab_plan:
         st.download_button("Download CSV", df.to_csv().encode(), "ramp.csv", key="dl1")
 
     # ----------------------------------------------------------------------------------------------- 2. what binds
-    st.markdown("## Utilization of each constraint")
+    st.markdown("## Constraint utilization")
     tag("2-tabs")
     tab_binds_today, tab_plan_needs = st.tabs(["What binds today", "What is needed"])
 
@@ -517,7 +488,8 @@ with tab_plan:
             "SSO flights": [_ratio(plan_sso[j], case_sso[j]) for j in range(6)],
             "LEO flights": [_ratio(plan_leo[j], case_leo[j]) for j in range(6)],
             "Solar": [_ratio(plan_sol[j], case_sol[j]) for j in range(6)],
-            "AI chips effective watts": [_ratio(plan_chip_w[j], case_chip_w[j]) for j in range(6)],
+            "Orion chips": [_ratio(sol["orion_used"][j] * 1e6, inp["orion"][j]) for j in range(6)],
+            "Vega chips": [_ratio(sol["vega_used"][j] * 1e6, inp["vega"][j]) for j in range(6)],
         }
         tg = inp["toggles"]
         row_labels = []
@@ -525,7 +497,7 @@ with tab_plan:
             lab = r
             if r in ("SSO flights", "LEO flights") and tg.get("launch_on", 1) == 0: lab += " (limit off)"
             if r == "Solar" and tg.get("solar_on", 1) == 0: lab += " (limit off)"
-            if r.startswith("AI chips") and tg.get("chips_on", 1) == 0: lab += " (limit off)"
+            if r.endswith("chips") and tg.get("chips_on", 1) == 0: lab += " (limit off)"
             row_labels.append(lab)
         row_keys = list(ratios)
         z2, txt2, outline2 = [], [], []
@@ -535,7 +507,7 @@ with tab_plan:
                 u = ratios[r][j]
                 zr.append(None if u is None else min(u, 1.5))
                 tr.append("n/a" if u is None else f"{u:.0%}")
-                chip_out = r.startswith("AI chips") and u is not None and u >= 0.995 and sol["shortfall"][j] > 0.01
+                chip_out = r.endswith("chips") and u is not None and u >= 0.995 and sol["shortfall"][j] > 0.01
                 br.append(chip_out)
             z2.append(zr); txt2.append(tr); outline2.append(br)
         fig2 = go.Figure(go.Heatmap(z=z2, x=[str(y) for y in YEARS], y=row_labels, text=txt2, texttemplate="%{text}", textfont=dict(size=14, color=WHITE),
@@ -548,7 +520,7 @@ with tab_plan:
         fig2.update_yaxes(autorange="reversed", showgrid=False)
         tag("2b-heatmap")
         st.plotly_chart(style_fig(fig2, 300, legend=False), use_container_width=True)
-        st.caption("Amount of current planned resource required to achieve optimal plan. White outline = limit holding compute back.")
+        st.caption("Amount of current planned resources required to achieve optimizer plan. White outline = limit holding compute back.")
         tag("2b-table")
         with st.expander("Show the numbers"):
             st.dataframe(pd.DataFrame(txt2, index=row_labels, columns=YEARS), use_container_width=True)
@@ -561,12 +533,15 @@ with tab_plan:
                 continue
             mx, ymx = max(vals, key=lambda t: t[0])
             short = {"SSO flights": "SSO flights", "LEO flights": "LEO flights", "Solar": "solar",
-                     "AI chips effective watts": "chips"}[r]
+                     "Orion chips": "Orion chips", "Vega chips": "Vega chips"}[r]
             if mx <= 1.005:
                 bits.append(f"{short} stays at the case level")
             else:
                 bits.append(f"up to {mx:.1f}x the case's {short} ({ymx})")
-        cy = [YEARS[j] for j in range(6) if outline2[row_keys.index("AI chips effective watts")][j]]
+        # chips cap the plan in a year when every chip type with supply that year is outlined (fully used while short)
+        cy = [YEARS[j] for j in range(6)
+              if any(outline2[row_keys.index(ck)][j] for ck in ("Orion chips", "Vega chips"))
+              and all(outline2[row_keys.index(ck)][j] or ratios[ck][j] is None for ck in ("Orion chips", "Vega chips"))]
         story = "Plan needs " + "; ".join(bits) + "."
         if cy:
             if len(cy) >= 2 and cy[-1] - cy[0] == len(cy) - 1:
@@ -588,53 +563,69 @@ with tab_plan:
                 supply, uses = case_leo, plan_leo; unit = "flights"
             elif rkey == "Solar":
                 supply, uses = case_sol, plan_sol; unit = "GW"
+            elif rkey == "Orion chips":
+                supply = [x / 1e6 for x in inp["orion"]]; uses = sol["orion_used"]; unit = "M chips"
             else:
-                supply = [w / 1e9 for w in case_chip_w]  # watts -> GW
-                uses = [w / 1e9 for w in plan_chip_w]
-                unit = "effective GW"
+                supply = [x / 1e6 for x in inp["vega"]]; uses = sol["vega_used"]; unit = "M chips"
             dd2 = pd.DataFrame({
                 "Base supply": [supply[j] * f for j in range(6)],
                 "Recommended plan uses": [uses[j] * f for j in range(6)],
                 "To add (plan − case, floor 0)": [max(0, uses[j] - supply[j]) * f for j in range(6)],
             }, index=YEARS).T
             st.markdown(f"**{pick2}** ({unit}{' per month' if monthly else ' per year'})")
-            st.dataframe(dd2.map(lambda v: fmt(v, 2 if unit.endswith("GW") else 1)), use_container_width=True)
+            st.dataframe(dd2.map(lambda v: fmt(v, 1 if unit == "flights" else 2)), use_container_width=True)
 
     # ----------------------------------------------------------------------------------------------- 3. units needed
-    st.markdown("## Resources needed to reach the optimized case")
+    st.markdown("## Annual resource gaps")
     OPT = VAR["Optimized (constrained)"]
+    # (unit, available in the selected case [each year's new supply], used by the optimized plan, scale)
     res_opts = {
-        "SSO flights": ("flights", lambda Rx: Rx["flights_sso"], 1),
-        "LEO flights": ("flights", lambda Rx: Rx["flights_leo"], 1),
-        "Solar": ("GW", lambda Rx: Rx["solar_used"], 1),
-        "Orion chips": ("M chips", lambda Rx: Rx["orion_used"], 1e-6),
-        "Vega chips": ("M chips", lambda Rx: Rx["vega_used"], 1e-6),
+        "SSO flights": ("flights", lambda Rx: Rx["sso_avail"], lambda Rx: Rx["flights_sso"], 1),
+        "LEO flights": ("flights", lambda Rx: Rx["leo_avail"], lambda Rx: Rx["flights_leo"], 1),
+        "Solar GW": ("GW", lambda Rx: Rx["solar_new"], lambda Rx: Rx["solar_used"], 1),
+        "Orion chips": ("M chips", lambda Rx: Rx["orion_new"], lambda Rx: Rx["orion_used"], 1e-6),
+        "Vega chips": ("M chips", lambda Rx: Rx["vega_new"], lambda Rx: Rx["vega_used"], 1e-6),
     }
     uc1, uc2 = st.columns([5.5, 1])
     with uc2:
         tag("3-controls")
         res_pick = st.radio("Resource", list(res_opts), key="res_pick")
-    unit_r, getter, scale = res_opts[res_pick]
-    sel_v = [getter(R)[j] * scale * mf for j in range(6)]
-    opt_v = [getter(OPT)[j] * scale * mf for j in range(6)]
+    unit_r, get_avail, get_used, scale = res_opts[res_pick]
+    sel_v = [get_avail(R)[j] * scale * mf for j in range(6)]          # available in the selected case
+    opt_v = [get_used(OPT)[j] * scale * mf for j in range(6)]          # needed (used) by the optimized plan
+    gap_v = [max(0.0, o - s_) for o, s_ in zip(opt_v, sel_v)]
+    tot_v = [s_ + g for s_, g in zip(sel_v, gap_v)]                    # bar height = max(available, needed)
     dp = 2 if unit_r != "flights" else 0
     with uc1:
         fig = go.Figure()
-        fig.add_bar(x=YEARS, y=sel_v, name=f"Selected case ({case_name()})", marker_color=G1,
-                    text=[f"{v:,.{dp}f}" for v in sel_v], textposition="outside", textfont=dict(color=G1))
-        fig.add_bar(x=YEARS, y=opt_v, name="Optimized (constrained)", marker_color=ACC,
-                    text=[f"{v:,.{dp}f}" for v in opt_v], textposition="outside", textfont=dict(color=ACC))
-        fig.update_layout(barmode="group", bargap=0.25, bargroupgap=0.05,
-                          yaxis_title=f"{unit_r} / {'month' if monthly else 'year'}")
+        fig.add_bar(x=YEARS, y=sel_v, name=f"{case_name()}: available", marker_color=G1,
+                    text=[f"{v:,.{dp}f}" if v > 0 else "" for v in sel_v], textposition="inside", insidetextfont=dict(color="#000000"))
+        fig.add_bar(x=YEARS, y=gap_v, name="Gap to optimized plan", marker_color=ACC,
+                    text=[f"{v:,.{dp}f}" if v > 0 else "" for v in gap_v], textposition="inside", insidetextfont=dict(color=WHITE))
+        fig.add_scatter(x=YEARS, y=tot_v, mode="text", text=[f"Need {v:,.{dp}f}" for v in opt_v], textposition="top center",
+                        textfont=dict(color=WHITE), showlegend=False, hoverinfo="skip")
+        fig.update_layout(barmode="stack", yaxis_title=f"{unit_r} / {'month' if monthly else 'year'}")
         fig = style_fig(fig, 380)
-        fig.update_layout(uniformtext_mode=False)
+        fig.update_yaxes(range=[0, max(tot_v + [1e-9]) * 1.15])
         tag("3-chart")
         st.plotly_chart(fig, use_container_width=True)
-    st.caption("Units of the chosen resource used each year by the selected case and by the optimized case (the selected settings plus the optimizer's added launch capacity and solar fab, run in whole satellites).")
+    st.caption("Gray: resources available each year in the selected scenario (that year's new supply, used or not). Blue: the additional amount the optimized plan needs. Label above each bar: the optimized plan's total need. Where supply already covers the need there is no gap; the optimized plan can also draw on chips or solar carried forward from earlier years.")
+    tag("3-totals")
+    if monthly:
+        k_ = 72; lab_sfx = "avg / month, 2028-33"
+    else:
+        k_ = 1; lab_sfx = "2028-33"
+    big = lambda v: f"{v:,.{dp}f}"
+    sp, nd, gp_ = sum(sel_v) * (12 if monthly else 1) / k_, sum(opt_v) * (12 if monthly else 1) / k_, sum(gap_v) * (12 if monthly else 1) / k_
+    bc = st.columns(3)
+    for col, lab, val, color in ((bc[0], f"Available, {lab_sfx}", sp, WHITE), (bc[1], f"Needed for optimized plan, {lab_sfx}", nd, WHITE),
+                                 (bc[2], f"Gap, {lab_sfx}", gp_, ACC)):
+        col.markdown(f"<div style='text-transform:uppercase;letter-spacing:0.08em;font-size:0.72rem;color:#BFBFBF'>{lab}</div>"
+                     f"<div style='font-size:2.0rem;font-weight:600;color:{color}'>{big(val)} <span style='font-size:1rem;color:#8C8C8C'>{unit_r}</span></div>",
+                     unsafe_allow_html=True)
     tag("3-table")
     with st.expander("Show the numbers"):
-        udf = pd.DataFrame({"Selected case": sel_v, "Optimized (constrained)": opt_v,
-                            "Additional needed (optimized − selected)": [o - s_ for o, s_ in zip(opt_v, sel_v)]}, index=YEARS).T
+        udf = pd.DataFrame({f"{case_name()}: available": sel_v, "Needed for optimized plan": opt_v, "Gap to optimized plan": gap_v}, index=YEARS).T
         if not monthly:
             udf["2028-33"] = udf.sum(axis=1)
         st.markdown(f"**{res_pick}** ({unit_r}{' per month' if monthly else ' per year'})")

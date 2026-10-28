@@ -23,8 +23,8 @@ Opens at http://localhost:8501. No internet needed once the packages are install
 |---|---|
 | Headline | Selected scenario vs. target, what binds by year, big numbers (per-month averages when monthly is on) |
 | Compute vs. target | Annual or cumulative; total, by orbit, generation, or class |
-| Utilization of each constraint | Heat map, two tabs: what binds in the selected case today, and what the recommended plan needs vs. case supply; drill into any row for units |
-| Resources needed to reach the optimized case | Side-by-side bars by year: units of the chosen resource used by the selected case vs. the optimized case |
+| Constraint utilization | Heat map, two tabs: what binds in the selected case today, and what the recommended plan needs vs. case supply; drill into any row for units |
+| Annual resource gaps | Stacked bars by year: resource available in the selected scenario (gray) plus the gap to the optimized plan (blue), with 2028-33 totals |
 | Annual bottlenecks | Share of the next unit of compute each limit would unlock |
 | Satellites by class | Number or compute, annual or cumulative |
 | Constrained compute by resource | Gap split into mix, flights alone, solar alone, flights + solar together, chips |
