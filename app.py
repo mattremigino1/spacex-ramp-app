@@ -1050,14 +1050,15 @@ with tab_plan:
                              detail, f"Start {YEARS[j0] - c['launch_lead']}"))
 
     mix_v = action_vals["mix"]
+    # valued like the other cards: the optimizer's plan at the optimized mix vs. at the seed mix (each re-planned)
+    mix_gw_plan = sum(sol_opt["compute"]) - sum(sol_cust["compute"])
     if inp["toggles"]["mix"] == "Optimized":
         action_cards.append((mix_v["worth_B"], "Keep the optimized class and orbit mix (already applied)",
-                             f"Worth ${mix_v['worth_B']:,.0f}B NPV and +{mix_v['gw']:.1f} GW at current resources, at no cost",
-                             "", "Now"))
+                             _worth_line(mix_v["worth_B"], mix_gw_plan), "", "Now"))
     else:
+        held = (f"; the plan delivers {mix_gw_plan:,.1f} GW less" if mix_gw_plan > 0.05 else "; the plan reaches the same compute, at higher cost")
         action_cards.append((mix_v["worth_B"], "Class mix held at the seed mix",
-                             f"Holding it costs ${mix_v['worth_B']:,.0f}B NPV and {mix_v['gw']:.1f} GW at current resources",
-                             "", "Your choice"))
+                             f"Holding it costs ${mix_v['worth_B']:,.0f}B NPV" + held, "", "Your choice"))
 
     action_cards.sort(key=lambda t: t[0], reverse=True)
 
