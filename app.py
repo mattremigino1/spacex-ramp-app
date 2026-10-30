@@ -1053,12 +1053,9 @@ with tab_plan:
     # valued like the other cards: the optimizer's plan at the optimized mix vs. at the seed mix (each re-planned)
     mix_gw_plan = sum(sol_opt["compute"]) - sum(sol_cust["compute"])
     if inp["toggles"]["mix"] == "Optimized":
-        action_cards.append((mix_v["worth_B"], "Keep the optimized class and orbit mix (already applied)",
+        action_cards.append((mix_v["worth_B"], "Keep the optimized class and orbit mix",
                              _worth_line(mix_v["worth_B"], mix_gw_plan), "", "Now"))
-    else:
-        held = (f"; the plan delivers {mix_gw_plan:,.1f} GW less" if mix_gw_plan > 0.05 else "; the plan reaches the same compute, at higher cost")
-        action_cards.append((mix_v["worth_B"], "Class mix held at the seed mix",
-                             f"Holding it costs ${mix_v['worth_B']:,.0f}B NPV" + held, "", "Your choice"))
+    # Fixed mix is a chosen constraint, not an action: its cost is noted under the ranked cards instead
 
     action_cards.sort(key=lambda t: t[0], reverse=True)
 
@@ -1089,6 +1086,9 @@ with tab_plan:
                     f"<span class='muted'>{' '.join(parts)}</span></div>", unsafe_allow_html=True)
 
     st.caption("Ranked by value at stake: the NPV lost if that action is dropped and the optimizer re-plans without it.")
+    if inp["toggles"]["mix"] != "Optimized":
+        held = (f"and the plan delivers {mix_gw_plan:,.1f} GW less" if mix_gw_plan > 0.05 else "for the same compute")
+        st.caption(f"Fixed mix: holding the seed mix costs ${mix_v['worth_B']:,.0f}B NPV versus the optimized mix, {held}.")
 
     def _row(Rv, tgt):
         return {"2028-33 compute (GW)": sum(Rv["realized"]), "% of target": f"{sum(Rv['realized']) / tgt:.0%}" if tgt else "n/a", "2033 compute (GW)": Rv["realized"][-1],
