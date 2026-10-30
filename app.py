@@ -28,6 +28,9 @@ h1 { font-size: 1.9rem !important; } h2 { font-size: 1.15rem !important; margin-
 [data-testid="stMetricLabel"] p { text-transform: uppercase; letter-spacing: 0.08em; font-size: 0.72rem; color: #BFBFBF; }
 .answer { font-size: 1.15rem; line-height: 1.5; border-left: 0; padding: 0.2rem 0 0.6rem 0; color: #FFFFFF; }
 .muted { color: #8C8C8C; font-size: 0.85rem; }
+.hovtip { position: relative; cursor: help; display: inline-block; border-bottom: 1px dotted #595959; }
+.hovtip .tiptext { visibility: hidden; opacity: 0; transition: opacity 0.15s; position: absolute; z-index: 1000; left: 0; top: 100%; margin-top: 6px; background: #1A1A1A; color: #FFFFFF; border: 1px solid #4A90E2; border-radius: 6px; padding: 8px 12px; font-size: 0.85rem; font-weight: 400; line-height: 1.5; white-space: nowrap; text-transform: none; letter-spacing: normal; }
+.hovtip:hover .tiptext { visibility: visible; opacity: 1; }
 .rec { background: #0D0D0D; border: 1px solid #262626; border-radius: 10px; padding: 0.9rem 1.1rem; margin-bottom: 0.6rem; }
 .rec b { letter-spacing: 0.03em; }
 .pill { display:inline-block; border:1px solid #595959; border-radius: 999px; padding: 0.05rem 0.6rem; font-size: 0.78rem; color:#BFBFBF; margin-right:0.4rem; }
@@ -463,6 +466,23 @@ def compute(inp_json):
     for key, fkey in (("leo", "flights_leo"), ("sso", "flights_sso"), ("fab", "solar")):
         v_al = copy.deepcopy(inp); v_al[fkey] = [1e7] * len(inp[fkey])
         action_vals.setdefault("alone", {})[key] = max(0.0, sum(run(v_al, sol)["realized"]) - base_gw)
+    # What lifting each limit unlocks: full re-runs at the current settings, exactly as if the sidebar toggle were
+    # switched off (flights off, solar off, both off). Chips = what is left once flights and solar are unlimited.
+    def _lifted(**tg):
+        v = copy.deepcopy(inp); v["toggles"].update(tg)
+        return run(v, solve(v))["realized"]
+    T_ = inp["target"]; b_ = R["realized"]
+    lo_, so_, bo_ = _lifted(launch_on=0), _lifted(solar_on=0), _lifted(launch_on=0, solar_on=0)
+    fx_ = copy.deepcopy(inp); fx_["toggles"]["mix"] = "Optimized"
+    flex_ = R["realized"] if str(inp["toggles"]["mix"]).strip() == "Optimized" else run(fx_, sol_opt)["realized"]
+    action_vals["lift"] = {
+        "flights": [lo_[j] - b_[j] for j in range(len(T_))],
+        "solar": [so_[j] - b_[j] for j in range(len(T_))],
+        "together": [bo_[j] - lo_[j] - so_[j] + b_[j] for j in range(len(T_))],
+        "chips": [T_[j] - bo_[j] for j in range(len(T_))],
+        "gap": [T_[j] - b_[j] for j in range(len(T_))],
+        "mix": [flex_[j] - b_[j] for j in range(len(T_))],      # flexible vs. selected mix; overlaps the pieces, not additive
+    }
     return sol, R, variants, sol_opt, sol_cust, opt_mix_R, action_vals
 
 
@@ -876,14 +896,16 @@ with tab_plan:
 
     # ----------------------------------------------------------------------------------------------- 5. closing the gap
     st.markdown("## Annual gigawatts of compute constrained by resource")
-    gp = R["gap_parts"]
-    parts = [("Orbit and satellite mix", "mix", G2), ("Flights only", "flights", WHITE), ("Solar only", "solar", G1), ("Needs both flights and solar", "together", ACC), ("Chips", "chips", ACC2)]
+    gp = action_vals["lift"]          # full re-runs with each limit lifted (same as switching the toggle off)
+    parts = [("Flights only", "flights", WHITE), ("Solar only", "solar", G1), ("Needs both flights and solar", "together", ACC), ("Chips", "chips", ACC2)]
     gc1, gc2 = st.columns([5.5, 1])
     with gc2:
         tag("6-controls")
         gap_mode = st.radio("Show", ["GW", "% of gap"], key="gaprel")
     rel_gap = gap_mode.startswith("%")
-    pos = {key_: [max(0, gp[key_][j]) for j in range(6)] for _, key_, _ in parts}
+    # pieces can dip below zero in a year (e.g., with solar carry-forward, lifting flights spends banked solar earlier),
+    # so the bars stack relative to zero and the totals use the true values; the pieces add exactly to the gap
+    pos = {key_: list(gp[key_]) for _, key_, _ in parts}
     gap_yr = [sum(pos[key_][j] for _, key_, _ in parts) for j in range(6)]          # equals the gap to target
     share = {key_: [pos[key_][j] / gap_yr[j] * 100 if gap_yr[j] > 1e-9 else 0 for j in range(6)] for _, key_, _ in parts}
     with gc1:
@@ -891,19 +913,19 @@ with tab_plan:
         for lab, key_, col in parts:
             if rel_gap:
                 vals = share[key_]
-                texts = [f"{v:.0f}%" if v > 3 else "" for v in vals]
+                texts = [f"{v:.0f}%" if abs(v) > 3 else "" for v in vals]
             else:
                 vals = [v * mf for v in pos[key_]]
-                texts = [fmt(v, 1) if v > 0.05 * max(T) * mf else "" for v in vals]
-            if sum(vals) > 1e-6:
+                texts = [fmt(v, 1) if abs(v) > 0.05 * max(T) * mf else "" for v in vals]
+            if sum(abs(v) for v in vals) > 1e-6:
                 fig.add_bar(x=YEARS, y=vals, name=lab, marker_color=col, text=texts, textposition="inside",
                             insidetextfont=dict(color="#000000" if col in (WHITE, G1, ACC2) else WHITE))
         if not rel_gap:
             fig.add_scatter(x=YEARS, y=[x * mf for x in T], name="Target", mode="markers",
                             marker=dict(symbol="line-ew", size=40, line=dict(width=3, color=G2)))
-        fig.update_layout(barmode="stack", yaxis_title=("% of gap" if rel_gap else unit_gw))
+        fig.update_layout(barmode="relative", yaxis_title=("% of gap" if rel_gap else unit_gw))
         fig = style_fig(fig, 400)
-        if rel_gap:
+        if rel_gap and min(min(share[k_]) for _, k_, _ in parts) >= -1e-9:
             fig.update_yaxes(range=[0, 100], ticksuffix="%")
         tag("6-chart")
         st.plotly_chart(fig, use_container_width=True)
@@ -912,7 +934,9 @@ with tab_plan:
     tag("6-totals")
     lab_sfx6 = "avg / month, 2028-33" if monthly else "2028-33"
     gap_total = sum(gap_yr)
-    tc = st.columns(len(parts))
+    tc = st.columns(len(parts) + 1)
+    _al = action_vals.get("alone", {})
+    _tip = (f"SSO alone: {_al.get('sso', 0):,.1f} GW<br>LEO alone: {_al.get('leo', 0):,.1f} GW<br>Note: not additive")
     for col_, (lab, key_, colr) in zip(tc, parts):
         tot_gw = sum(pos[key_])
         gw_txt = f"{(tot_gw / 72 if monthly else tot_gw):,.{2 if monthly else 1}f}"
@@ -921,9 +945,15 @@ with tab_plan:
             main_txt, small_txt = f"{pct:.0%}", f"{gw_txt} GW"
         else:
             main_txt, small_txt = f"{gw_txt} <span style='font-size:1rem;color:#8C8C8C'>GW</span>", f"{pct:.0%} of cumulative gap"
+        if key_ == "flights":   # hover shows what each orbit's flights unlock on their own
+            main_txt = f"<span class='hovtip'>{main_txt}<span class='tiptext'>{_tip}</span></span>"
         col_.markdown(f"<div style='text-transform:uppercase;letter-spacing:0.08em;font-size:0.72rem;line-height:1.35;min-height:2.7em;color:#BFBFBF'>{lab}, {lab_sfx6}</div>"
                       f"<div style='font-size:2.0rem;font-weight:600;color:{colr}'>{main_txt}</div>"
                       f"<div style='font-size:0.8rem;color:#8C8C8C'>{small_txt}</div>", unsafe_allow_html=True)
+    mix_gw = sum(gp["mix"])
+    tc[-1].markdown(f"<div style='text-transform:uppercase;letter-spacing:0.08em;font-size:0.72rem;line-height:1.35;min-height:2.7em;color:#BFBFBF'>Orbit and satellite mix, {lab_sfx6}</div>"
+                    f"<div style='font-size:2.0rem;font-weight:600;color:{G2}'>{mix_gw:,.1f} <span style='font-size:1rem;color:#8C8C8C'>GW</span></div>"
+                    f"<div style='font-size:0.8rem;color:#8C8C8C'>Not additive: overlaps the pieces in the chart</div>", unsafe_allow_html=True)
     tag("6-table")
     with st.expander("Show the numbers"):
         if rel_gap:
@@ -1001,7 +1031,7 @@ with tab_plan:
         av = action_vals["fab"]
         detail = (f"{fab[next(j for j in range(6) if fab[j] > 1e-6)]:,.1f} GW/yr usable in {y0}, "
                   f"growing to {fab[-1]:,.1f} GW/yr by {YEARS[-1]}; ${sol['pv']['new_fab']:,.0f}B capex (PV)")
-        action_cards.append((av["worth_B"], "Commit a solar fab", _worth_line(av["worth_B"], av["gw_lost"], action_vals.get("alone", {}).get("fab")),
+        action_cards.append((av["worth_B"], "Commit a solar fab", _worth_line(av["worth_B"], av["gw_lost"]),
                              detail, f"Decide {y0 - c['fab_lead']}"))
 
     for orb, key, cap_key, new_key, orbit_capex in (
@@ -1016,7 +1046,7 @@ with tab_plan:
         detail = f"Extra flights per year: {steps}"
         if orbit_capex > 0:
             detail += f"; ${orbit_capex:,.0f}B capex (PV)"
-        action_cards.append((av["worth_B"], f"Add {orb} launch capacity", _worth_line(av["worth_B"], av["gw_lost"], action_vals.get("alone", {}).get(key)),
+        action_cards.append((av["worth_B"], f"Add {orb} launch capacity", _worth_line(av["worth_B"], av["gw_lost"]),
                              detail, f"Start {YEARS[j0] - c['launch_lead']}"))
 
     mix_v = action_vals["mix"]
